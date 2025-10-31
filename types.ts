@@ -1,3 +1,10 @@
+export interface ReceiptItemData {
+  description: {
+    original: string;
+    translated: string;
+  };
+  price: number;
+}
 
 export interface Receipt {
   id: string;
@@ -9,6 +16,7 @@ export interface Receipt {
   date: string; // YYYY-MM-DD
   total: number;
   currency: string;
+  items: ReceiptItemData[];
   status: 'pending' | 'syncing' | 'synced';
 }
 
@@ -20,4 +28,5 @@ export interface ExtractedReceiptData {
   date: string; // Should be in YYYY-MM-DD format
   total: number;
   currency: string;
+  items: ReceiptItemData[];
 }

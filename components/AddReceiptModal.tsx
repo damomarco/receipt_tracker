@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { processReceiptImage, askAboutImage } from '../services/geminiService';
 import { Receipt, ExtractedReceiptData } from '../types';
-import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon } from './icons';
+import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon, PlusCircleIcon, TrashIcon } from './icons';
 
 interface AddReceiptModalProps {
   onClose: () => void;
@@ -91,6 +91,35 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
         setExtractedData(prev => prev ? { ...prev, [name]: name === 'total' ? parseFloat(value) || 0 : value } : null);
     }
   };
+
+  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price', value: string) => {
+    if (!extractedData) return;
+
+    const newItems = [...extractedData.items];
+    const itemToUpdate = { ...newItems[index] };
+
+    if (field === 'price') {
+      itemToUpdate.price = parseFloat(value) || 0;
+    } else {
+      itemToUpdate.description = { ...itemToUpdate.description, [field]: value };
+    }
+    
+    newItems[index] = itemToUpdate;
+
+    setExtractedData(prev => prev ? { ...prev, items: newItems } : null);
+  };
+
+  const handleAddItem = () => {
+    if (!extractedData) return;
+    const newItem = { description: { original: '', translated: '' }, price: 0 };
+    setExtractedData(prev => prev ? { ...prev, items: [...(prev.items || []), newItem] } : null);
+  }
+
+  const handleRemoveItem = (index: number) => {
+    if (!extractedData) return;
+    const newItems = extractedData.items.filter((_, i) => i !== index);
+    setExtractedData(prev => prev ? { ...prev, items: newItems } : null);
+  }
   
   const triggerCameraInput = () => {
     cameraInputRef.current?.click();
@@ -180,6 +209,33 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                       </div>
                     </div>
                   </div>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <h3 className="text-md font-medium text-gray-800 mb-2">Items</h3>
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+                      {extractedData.items.map((item, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-5">
+                            <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                          </div>
+                          <div className="col-span-3">
+                            <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                          </div>
+                          <div className="col-span-3">
+                            <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                          </div>
+                          <div className="col-span-1 flex justify-end">
+                            <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3">
+                        <PlusCircleIcon className="w-5 h-5" />
+                        <span>Add Item</span>
+                    </button>
+                  </div>
+
 
                   <div className="mt-6 pt-4 border-t">
                     <h3 className="text-lg font-medium text-gray-800">Ask about this receipt</h3>

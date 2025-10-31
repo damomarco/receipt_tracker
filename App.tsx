@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AddReceiptModal } from './components/AddReceiptModal';
 import { Header } from './components/Header';
@@ -32,6 +31,7 @@ function App() {
     const newReceipt: Receipt = {
       id: new Date().toISOString() + Math.random(), // Add random number to ensure unique ID
       ...newReceiptData,
+      items: newReceiptData.items || [], // Ensure items is always an array
       status: isOnline ? 'synced' : 'pending',
     };
     setReceipts(prevReceipts => [...prevReceipts, newReceipt].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));

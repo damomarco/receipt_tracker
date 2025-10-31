@@ -1,4 +1,3 @@
-
 import { Receipt } from '../types';
 
 export const exportToCSV = (receipts: Receipt[], date: string) => {
@@ -7,13 +6,14 @@ export const exportToCSV = (receipts: Receipt[], date: string) => {
     return;
   }
 
-  const headers = ['Date', 'Merchant (Original)', 'Merchant (Translated)', 'Total Amount', 'Currency', 'Image URL'];
+  const headers = ['Date', 'Merchant (Original)', 'Merchant (Translated)', 'Total Amount', 'Currency', 'Items (JSON)', 'Image URL'];
   const rows = receipts.map(receipt => [
     receipt.date,
     `"${receipt.merchant.original.replace(/"/g, '""')}"`,
     `"${receipt.merchant.translated.replace(/"/g, '""')}"`,
     receipt.total,
     receipt.currency,
+    `"${JSON.stringify(receipt.items || []).replace(/"/g, '""')}"`,
     receipt.image // Note: This will be a very long data URL
   ]);
 

@@ -40,8 +40,36 @@ const receiptSchema = {
       type: Type.STRING,
       description: "The currency of the transaction (e.g., JPY, USD). Use the currency symbol or code from the receipt.",
     },
+    items: {
+      type: Type.ARRAY,
+      description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          description: {
+            type: Type.OBJECT,
+            properties: {
+              original: {
+                type: Type.STRING,
+                description: "The original item name as it appears on the receipt, in Japanese.",
+              },
+              translated: {
+                type: Type.STRING,
+                description: "The English translation of the item name.",
+              },
+            },
+            required: ['original', 'translated'],
+          },
+          price: {
+            type: Type.NUMBER,
+            description: "The price of the individual item.",
+          },
+        },
+        required: ['description', 'price'],
+      }
+    }
   },
-  required: ['merchant', 'date', 'total', 'currency'],
+  required: ['merchant', 'date', 'total', 'currency', 'items'],
 };
 
 export const processReceiptImage = async (base64Image: string): Promise<ExtractedReceiptData> => {
@@ -53,7 +81,7 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
   };
 
   const textPart = {
-    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, and currency. Translate the merchant name to English. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
+    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. Translate the merchant name and all item descriptions to English. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
   };
 
   try {
@@ -70,8 +98,19 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
     const parsedData: ExtractedReceiptData = JSON.parse(jsonText);
 
     // Basic validation
-    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency) {
+    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency || !Array.isArray(parsedData.items)) {
       throw new Error("Extracted data is missing required fields.");
+    }
+    
+    // If Gemini fails itemization but gets a total, create a fallback item to prevent errors.
+    if (parsedData.items.length === 0 && parsedData.total > 0) {
+        parsedData.items.push({
+            description: {
+                original: '不明',
+                translated: 'Uncategorized Item'
+            },
+            price: parsedData.total
+        });
     }
 
     return parsedData;

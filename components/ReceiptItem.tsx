@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Receipt } from '../types';
-import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon } from './icons';
+import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, ChevronDownIcon, PlusCircleIcon } from './icons';
 import { askAboutImage } from '../services/geminiService';
 
 interface ReceiptItemProps {
@@ -25,6 +25,7 @@ const StatusIndicator: React.FC<{ status: Receipt['status'] }> = ({ status }) =>
 export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
+  const [isItemsVisible, setIsItemsVisible] = useState(false);
 
   // State for chat feature
   const [chatPrompt, setChatPrompt] = useState('');
@@ -41,6 +42,30 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
         setEditedReceipt(prev => ({ ...prev, [name]: name === 'total' ? parseFloat(value) || 0 : value }));
     }
   };
+
+  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price', value: string) => {
+    const newItems = [...editedReceipt.items];
+    const itemToUpdate = { ...newItems[index] };
+
+    if (field === 'price') {
+      itemToUpdate.price = parseFloat(value) || 0;
+    } else {
+      itemToUpdate.description = { ...itemToUpdate.description, [field]: value };
+    }
+    
+    newItems[index] = itemToUpdate;
+    setEditedReceipt(prev => ({ ...prev, items: newItems }));
+  };
+
+  const handleAddItem = () => {
+    const newItem = { description: { original: '', translated: '' }, price: 0 };
+    setEditedReceipt(prev => ({ ...prev, items: [...(prev.items || []), newItem] }));
+  }
+
+  const handleRemoveItem = (index: number) => {
+    const newItems = editedReceipt.items.filter((_, i) => i !== index);
+    setEditedReceipt(prev => ({ ...prev, items: newItems }));
+  }
 
   const handleSave = () => {
     onUpdate(editedReceipt);
@@ -87,6 +112,32 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                 <div className="flex space-x-2">
                     <input type="number" name="total" value={editedReceipt.total} onChange={handleEditChange} className="w-1/2 p-1 border rounded" placeholder="Total"/>
                     <input type="text" name="currency" value={editedReceipt.currency} onChange={handleEditChange} className="w-1/2 p-1 border rounded" placeholder="Currency"/>
+                </div>
+
+                <div className="mt-4 pt-4 border-t">
+                  <h3 className="text-md font-medium text-gray-800 mb-2">Items</h3>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                    {(editedReceipt.items || []).map((item, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                        </div>
+                        <div className="col-span-3">
+                          <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                        </div>
+                        <div className="col-span-3">
+                          <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                        </div>
+                        <div className="col-span-1">
+                          <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3">
+                      <PlusCircleIcon className="w-5 h-5" />
+                      <span>Add Item</span>
+                  </button>
                 </div>
 
                 {/* AI Chat Section */}
@@ -143,6 +194,26 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                 <p className="mt-2 text-2xl font-bold text-blue-600">
                   {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(receipt.total)}
                 </p>
+                {receipt.items && receipt.items.length > 0 && (
+                  <div className="mt-3">
+                    <button onClick={() => setIsItemsVisible(!isItemsVisible)} className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-medium py-1">
+                      <span>{isItemsVisible ? 'Hide' : 'Show'} {receipt.items.length} item{receipt.items.length > 1 ? 's' : ''}</span>
+                      <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isItemsVisible ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isItemsVisible && (
+                      <ul className="mt-2 pl-4 border-l-2 border-gray-200 space-y-1 text-sm">
+                        {receipt.items.map((item, index) => (
+                          <li key={index} className="flex justify-between">
+                            <span className="text-gray-700 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
+                            <span className="text-gray-800 font-medium flex-shrink-0">
+                              {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
             </>
         )}
       </div>
