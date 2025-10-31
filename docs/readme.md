@@ -10,6 +10,8 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **Interactive AI Chat**: Ask follow-up questions about any receipt image to get more details, such as a list of itemized purchases.
 - **Full Offline Capability**: Add new receipts even without an internet connection. The app automatically syncs them once you're back online.
 - **Data Editing**: Easily correct or update any information extracted by the AI, including individual line items.
+- **Collapsible Day View**: Receipts are grouped by date in collapsible sections for a cleaner, more organized view.
+- **Fullscreen Image Viewer**: Tap any receipt thumbnail to view a high-resolution, zoomable image of the receipt.
 - **CSV Export**: Export receipts for any given day into a CSV file for easy reporting, now including itemized data.
 - **Responsive Design**: A clean, mobile-first interface that works great on any device.
 - **PWA Ready**: Can be installed on a mobile device's home screen for a native-app-like experience.
