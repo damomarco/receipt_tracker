@@ -101,10 +101,15 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
   };
 
   return (
-    <div className="p-4 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:space-x-4 hover:bg-gray-50 transition-colors">
-      <div className="flex-shrink-0 w-full sm:w-24 mb-4 sm:mb-0">
-        <img src={receipt.image} alt="Receipt thumbnail" className="w-full sm:w-24 h-auto sm:h-24 object-contain rounded-md bg-gray-100" />
-        <div className="flex items-center justify-center space-x-4 mt-2">
+    <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="flex justify-between items-start mb-2">
+        <img 
+          src={receipt.image} 
+          alt="Receipt thumbnail" 
+          className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-md bg-gray-100 flex-shrink-0" 
+        />
+        
+        <div className="flex items-start space-x-2 pl-4">
           {isEditing ? (
             <>
               <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full" aria-label="Save changes"><SaveIcon className="w-6 h-6"/></button>
@@ -118,7 +123,8 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
           )}
         </div>
       </div>
-      <div className="flex-grow">
+      
+      <div className="w-full">
         {isEditing ? (
              <div className="space-y-2">
                 <input type="text" name="merchant.translated" value={editedReceipt.merchant.translated} onChange={handleEditChange} className="w-full p-1 border rounded text-lg font-semibold" placeholder="Merchant (EN)"/>
