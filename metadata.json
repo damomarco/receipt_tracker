@@ -1,0 +1,7 @@
+{
+  "name": "Travel Receipt Manager",
+  "description": "A Progressive Web App to capture, process, and organize cash receipt photos for school trips to Japan using AI-powered OCR and translation. It simplifies expense tracking with offline capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
