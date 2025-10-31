@@ -118,7 +118,6 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleFileChange}
                 className="hidden"
               />
