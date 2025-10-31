@@ -102,7 +102,22 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
 
   return (
     <div className="p-4 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:space-x-4 hover:bg-gray-50 transition-colors">
-      <img src={receipt.image} alt="Receipt thumbnail" className="w-full sm:w-24 h-auto sm:h-24 object-contain rounded-md flex-shrink-0 bg-gray-100 mb-4 sm:mb-0" />
+      <div className="flex-shrink-0 w-full sm:w-24 mb-4 sm:mb-0">
+        <img src={receipt.image} alt="Receipt thumbnail" className="w-full sm:w-24 h-auto sm:h-24 object-contain rounded-md bg-gray-100" />
+        <div className="flex items-center justify-center space-x-4 mt-2">
+          {isEditing ? (
+            <>
+              <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full" aria-label="Save changes"><SaveIcon className="w-6 h-6"/></button>
+              <button onClick={handleCancel} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Cancel edit"><CancelIcon className="w-6 h-6"/></button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setIsEditing(true)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full" aria-label="Edit receipt"><EditIcon className="w-6 h-6"/></button>
+              <button onClick={() => onDelete(receipt.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-6 h-6"/></button>
+            </>
+          )}
+        </div>
+      </div>
       <div className="flex-grow">
         {isEditing ? (
              <div className="space-y-2">
@@ -216,19 +231,6 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                 )}
             </>
         )}
-      </div>
-      <div className="flex flex-col space-y-2 flex-shrink-0 mt-4 sm:mt-0 sm:ml-4">
-          {isEditing ? (
-            <>
-              <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full" aria-label="Save changes"><SaveIcon className="w-5 h-5"/></button>
-              <button onClick={handleCancel} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Cancel edit"><CancelIcon className="w-5 h-5"/></button>
-            </>
-          ) : (
-            <>
-                <button onClick={() => setIsEditing(true)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full" aria-label="Edit receipt"><EditIcon className="w-5 h-5"/></button>
-                <button onClick={() => onDelete(receipt.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-5 h-5"/></button>
-            </>
-          )}
       </div>
     </div>
   );
