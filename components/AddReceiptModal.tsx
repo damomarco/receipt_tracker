@@ -1,8 +1,7 @@
-
 import React, { useState, useRef } from 'react';
 import { processReceiptImage, askAboutImage } from '../services/geminiService';
 import { Receipt, ExtractedReceiptData } from '../types';
-import { CameraIcon, SpinnerIcon, UploadIcon, XIcon } from './icons';
+import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon } from './icons';
 
 interface AddReceiptModalProps {
   onClose: () => void;
@@ -15,7 +14,8 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
   const [extractedData, setExtractedData] = useState<ExtractedReceiptData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // State for chat feature
   const [chatPrompt, setChatPrompt] = useState('');
@@ -92,8 +92,12 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }
   };
   
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const triggerCameraInput = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const triggerGalleryInput = () => {
+    galleryInputRef.current?.click();
   };
 
   return (
@@ -107,15 +111,29 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
         <div className="p-6 overflow-y-auto">
           {!image ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg text-center p-6">
-              <CameraIcon className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-700">Capture a receipt</h3>
-              <p className="text-sm text-gray-500 mb-4">Take a photo or upload an image from your gallery.</p>
-              <button onClick={triggerFileInput} className="flex items-center space-x-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
-                <UploadIcon className="w-5 h-5"/>
-                <span>Choose Image</span>
-              </button>
+              <ReceiptIcon className="w-16 h-16 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-700">Add a receipt</h3>
+              <p className="text-sm text-gray-500 mb-6">Choose how you'd like to add your receipt image.</p>
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full justify-center">
+                <button onClick={triggerCameraInput} className="flex items-center justify-center space-x-2 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
+                    <CameraIcon className="w-6 h-6"/>
+                    <span>Take Photo</span>
+                </button>
+                <button onClick={triggerGalleryInput} className="flex items-center justify-center space-x-2 bg-gray-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition w-full sm:w-auto">
+                    <PhotoIcon className="w-6 h-6"/>
+                    <span>From Gallery</span>
+                </button>
+              </div>
               <input
-                ref={fileInputRef}
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={galleryInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
