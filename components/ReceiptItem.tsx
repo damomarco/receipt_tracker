@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Receipt, Category, CATEGORIES, ReceiptItemData } from '../types';
+import { Receipt, Category, ReceiptItemData } from '../types';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, ChevronDownIcon, PlusCircleIcon } from './icons';
 import { ImageModal } from './ImageModal';
 
@@ -7,9 +7,10 @@ interface ReceiptItemProps {
   receipt: Receipt;
   onDelete: (id: string) => void;
   onUpdate: (receipt: Receipt) => void;
+  allCategories: string[];
 }
 
-export const categoryColorMap: Record<Category, string> = {
+export const categoryColorMap: Record<string, string> = {
   'Food & Drink': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
   'Groceries': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
   'Transportation': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
@@ -34,7 +35,7 @@ const StatusIndicator: React.FC<{ status: Receipt['status'] }> = ({ status }) =>
   }
 }
 
-export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onUpdate }) => {
+export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onUpdate, allCategories }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [isItemsVisible, setIsItemsVisible] = useState(false);
@@ -88,7 +89,6 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
     setIsEditing(false);
   }
 
-  // FIX: Explicitly type `uniqueCategories` as `Category[]` to prevent `category` from being inferred as `unknown`.
   const uniqueCategories: Category[] = Array.from(new Set(receipt.items?.map(item => item.category).filter(Boolean) || []));
 
   return (
@@ -149,7 +149,7 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                           </div>
                           <div className="col-span-3">
                             <select value={item.category} onChange={(e) => handleItemChange(index, 'category', e.target.value)} className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                           </div>
                           <div className="col-span-1">

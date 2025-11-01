@@ -1,6 +1,7 @@
 
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { ExtractedReceiptData, Receipt, CATEGORIES } from "../types";
+import { ExtractedReceiptData, Receipt, DEFAULT_CATEGORIES } from "../types";
 
 const API_KEY = process.env.API_KEY;
 
@@ -12,73 +13,73 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const model = 'gemini-2.5-flash';
 
-const receiptSchema = {
-  type: Type.OBJECT,
-  properties: {
-    merchant: {
-      type: Type.OBJECT,
-      properties: {
-        original: {
-          type: Type.STRING,
-          description: "The original merchant name as it appears on the receipt, in Japanese.",
-        },
-        translated: {
-          type: Type.STRING,
-          description: "The English translation of the merchant name.",
-        },
-      },
-      required: ['original', 'translated'],
-    },
-    date: {
-      type: Type.STRING,
-      description: "The date of the transaction in YYYY-MM-DD format. Handle Japanese date formats like 令和 (Reiwa).",
-    },
-    total: {
-      type: Type.NUMBER,
-      description: "The final total amount of the transaction.",
-    },
-    currency: {
-      type: Type.STRING,
-      description: "The currency of the transaction (e.g., JPY, USD). Use the currency symbol or code from the receipt.",
-    },
-    items: {
-      type: Type.ARRAY,
-      description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
-      items: {
+export const processReceiptImage = async (base64Image: string, allCategories: string[]): Promise<ExtractedReceiptData> => {
+  const receiptSchema = {
+    type: Type.OBJECT,
+    properties: {
+      merchant: {
         type: Type.OBJECT,
         properties: {
-          description: {
-            type: Type.OBJECT,
-            properties: {
-              original: {
-                type: Type.STRING,
-                description: "The original item name as it appears on the receipt, in Japanese.",
-              },
-              translated: {
-                type: Type.STRING,
-                description: "The English translation of the item name.",
-              },
-            },
-            required: ['original', 'translated'],
-          },
-          price: {
-            type: Type.NUMBER,
-            description: "The price of the individual item.",
-          },
-          category: {
+          original: {
             type: Type.STRING,
-            description: `Categorize the item. Choose one of the following categories: ${CATEGORIES.join(', ')}. If unsure, use 'Other'.`,
-            enum: CATEGORIES,
+            description: "The original merchant name as it appears on the receipt, in Japanese.",
+          },
+          translated: {
+            type: Type.STRING,
+            description: "The English translation of the merchant name.",
           },
         },
-        required: ['description', 'price', 'category'],
+        required: ['original', 'translated'],
+      },
+      date: {
+        type: Type.STRING,
+        description: "The date of the transaction in YYYY-MM-DD format. Handle Japanese date formats like 令和 (Reiwa).",
+      },
+      total: {
+        type: Type.NUMBER,
+        description: "The final total amount of the transaction.",
+      },
+      currency: {
+        type: Type.STRING,
+        description: "The currency of the transaction (e.g., JPY, USD). Use the currency symbol or code from the receipt.",
+      },
+      items: {
+        type: Type.ARRAY,
+        description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            description: {
+              type: Type.OBJECT,
+              properties: {
+                original: {
+                  type: Type.STRING,
+                  description: "The original item name as it appears on the receipt, in Japanese.",
+                },
+                translated: {
+                  type: Type.STRING,
+                  description: "The English translation of the item name.",
+                },
+              },
+              required: ['original', 'translated'],
+            },
+            price: {
+              type: Type.NUMBER,
+              description: "The price of the individual item.",
+            },
+            category: {
+              type: Type.STRING,
+              description: `Categorize the item. Choose one of the following categories: ${allCategories.join(', ')}. If unsure, use 'Other'.`,
+              enum: allCategories,
+            },
+          },
+          required: ['description', 'price', 'category'],
+        }
       }
-    }
-  },
-  required: ['merchant', 'date', 'total', 'currency', 'items'],
-};
-
-export const processReceiptImage = async (base64Image: string): Promise<ExtractedReceiptData> => {
+    },
+    required: ['merchant', 'date', 'total', 'currency', 'items'],
+  };
+  
   const imagePart = {
     inlineData: {
       mimeType: 'image/jpeg',
@@ -87,7 +88,7 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
   };
 
   const textPart = {
-    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. For each item, translate its description to English and assign it an appropriate expense category. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
+    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. For each item, translate its description to English and assign it an appropriate expense category from the provided list. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
   };
 
   try {

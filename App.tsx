@@ -5,15 +5,20 @@ import { ReceiptList } from './components/ReceiptList';
 import { PlusIcon, ChatBubbleIcon } from './components/icons';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { Receipt } from './types';
+import { Receipt, DEFAULT_CATEGORIES } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
 import { SpendingSummary } from './components/SpendingSummary';
+import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [receipts, setReceipts] = useLocalStorage<Receipt[]>('receipts', []);
+  const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
   const isOnline = useOnlineStatus();
+
+  const allCategories = [...DEFAULT_CATEGORIES, ...customCategories].sort();
 
   useEffect(() => {
     // One-time data migration for item-level categories
@@ -73,15 +78,62 @@ function App() {
     setReceipts(prevReceipts => prevReceipts.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
   };
 
+  const addCustomCategory = (name: string): boolean => {
+    if (allCategories.some(c => c.toLowerCase() === name.toLowerCase())) {
+      return false; // Indicate that the category already exists
+    }
+    setCustomCategories(prev => [...prev, name]);
+    return true;
+  };
+
+  const updateCustomCategory = (oldName: string, newName: string): boolean => {
+    if (oldName.toLowerCase() !== newName.toLowerCase() && allCategories.some(c => c.toLowerCase() === newName.toLowerCase())) {
+      return false; // Indicate that the new name already exists
+    }
+    // Update the category in the custom categories list
+    setCustomCategories(prev => prev.map(c => (c === oldName ? newName : c)));
+
+    // Cascade the update to all receipt items
+    setReceipts(prevReceipts =>
+      prevReceipts.map(receipt => ({
+        ...receipt,
+        items: receipt.items.map(item =>
+          item.category === oldName ? { ...item, category: newName } : item
+        ),
+      }))
+    );
+    return true;
+  };
+
+  const deleteCustomCategory = (name: string) => {
+    // Remove the category from the custom list
+    setCustomCategories(prev => prev.filter(c => c !== name));
+    
+    // Re-assign items with this category to 'Other'
+    setReceipts(prevReceipts =>
+      prevReceipts.map(receipt => ({
+        ...receipt,
+        items: receipt.items.map(item =>
+          item.category === name ? { ...item, category: 'Other' } : item
+        ),
+      }))
+    );
+  };
+
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <Header isOnline={isOnline} pendingCount={pendingCount} syncingCount={syncingCount} />
+      <Header 
+        isOnline={isOnline} 
+        pendingCount={pendingCount} 
+        syncingCount={syncingCount}
+        onManageCategories={() => setIsCategoriesModalOpen(true)}
+      />
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <SpendingSummary receipts={receipts} />
-        <ReceiptList receipts={receipts} onDelete={deleteReceipt} onUpdate={updateReceipt} />
+        <ReceiptList receipts={receipts} onDelete={deleteReceipt} onUpdate={updateReceipt} allCategories={allCategories} />
       </main>
       
       <button
@@ -104,6 +156,7 @@ function App() {
         <AddReceiptModal
           onClose={() => setIsModalOpen(false)}
           onAddReceipt={addReceipt}
+          allCategories={allCategories}
         />
       )}
 
@@ -111,6 +164,17 @@ function App() {
         <GlobalChatModal
           receipts={receipts}
           onClose={() => setIsChatModalOpen(false)}
+        />
+      )}
+
+      {isCategoriesModalOpen && (
+        <ManageCategoriesModal
+          onClose={() => setIsCategoriesModalOpen(false)}
+          defaultCategories={DEFAULT_CATEGORIES}
+          customCategories={customCategories}
+          onAddCategory={addCustomCategory}
+          onUpdateCategory={updateCustomCategory}
+          onDeleteCategory={deleteCustomCategory}
         />
       )}
     </div>

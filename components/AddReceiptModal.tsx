@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { processReceiptImage } from '../services/geminiService';
-import { Receipt, ExtractedReceiptData, CATEGORIES, Category } from '../types';
+import { Receipt, ExtractedReceiptData, Category } from '../types';
 import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon, PlusCircleIcon, TrashIcon } from './icons';
 
 interface AddReceiptModalProps {
   onClose: () => void;
   onAddReceipt: (receipt: Omit<Receipt, 'id' | 'status'>) => void;
+  allCategories: string[];
 }
 
-export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipt }) => {
+export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipt, allCategories }) => {
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedReceiptData | null>(null);
@@ -37,7 +38,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     setExtractedData(null);
     try {
       const base64Image = imageDataUrl.split(',')[1];
-      const data = await processReceiptImage(base64Image);
+      const data = await processReceiptImage(base64Image, allCategories);
       setExtractedData(data);
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
@@ -206,7 +207,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                           </div>
                            <div className="col-span-3">
                             <select value={item.category} onChange={(e) => handleItemChange(index, 'category', e.target.value)} className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                           </div>
                           <div className="col-span-1 flex justify-end">

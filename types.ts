@@ -1,5 +1,6 @@
 
-export const CATEGORIES = [
+
+export const DEFAULT_CATEGORIES = [
   'Food & Drink',
   'Groceries',
   'Transportation',
@@ -11,7 +12,8 @@ export const CATEGORIES = [
   'Other',
 ] as const;
 
-export type Category = typeof CATEGORIES[number];
+export type DefaultCategory = typeof DEFAULT_CATEGORIES[number];
+export type Category = string;
 
 export interface ReceiptItemData {
   description: {
