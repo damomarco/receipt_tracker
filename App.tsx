@@ -7,6 +7,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { Receipt } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
+import { SpendingSummary } from './components/SpendingSummary';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,6 +72,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <Header isOnline={isOnline} pendingCount={pendingCount} syncingCount={syncingCount} />
       <main className="flex-grow container mx-auto p-4 md:p-6">
+        <SpendingSummary receipts={receipts} />
         <ReceiptList receipts={receipts} onDelete={deleteReceipt} onUpdate={updateReceipt} />
       </main>
       
