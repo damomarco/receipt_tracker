@@ -54,8 +54,7 @@ export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ dateFilter, se
       if (!acc[currency]) {
         acc[currency] = 0;
       }
-      const receiptTotalFromItems = receipt.items.reduce((sum, item) => sum + (item.price || 0), 0);
-      acc[currency] += receiptTotalFromItems;
+      acc[currency] += receipt.total;
       return acc;
     }, {} as Totals);
   }, [receipts]);

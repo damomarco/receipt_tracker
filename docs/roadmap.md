@@ -1,4 +1,3 @@
-
 # Project Roadmap
 
 This document outlines the planned features and future direction for the Travel Receipt Manager application.
@@ -6,6 +5,14 @@ This document outlines the planned features and future direction for the Travel 
 ## Short-Term Goals (Next 1-3 Months)
 
 ### Recently Completed
+
+-   **Improved Currency Conversion**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Integrated the Frankfurter.app API to fetch historical exchange rates. Users can now set a "home currency" and see a grand total converted to that currency, with rates cached for offline use. The correct rate for the date of each receipt is used.
+
+-   **Monthly Grouping**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented monthly collapsible sections in the main receipt list to better organize receipts from longer trips. Each month contains the existing collapsible daily lists.
 
 -   **Migrate Image Storage to IndexedDB**:
     -   **Status**: ✅ **Done**
@@ -36,15 +43,9 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Planned
 
--   **Improved Currency Conversion**:
-    -   **Status**: Planned
-    -   **Description**: Integrate a free currency exchange rate API. Allow the user to set a "home currency" and automatically display converted totals for all receipts.
-    -   **Reward (High)**: A key feature for a travel app. It solves a major user pain point by removing the mental math of converting multiple currencies, providing a clear picture of total trip cost.
-    -   **Risk (Medium)**: Introduces an external dependency. Requires careful management of API keys, rate limits (via caching), and graceful handling for when the user is offline or the API service is unavailable.
-
 -   **Production Build Process**:
     -   **Status**: Planned
-    -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization.
+    -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization. **Note**: Preparatory refactoring has been completed to remove dynamic class name generation, which is a major prerequisite for this task.
     -   **Reward (Very High)**: A foundational step for a production-grade application. It will dramatically improve performance (faster load times), enhance the developer experience, and unlock further optimizations.
     -   **Risk (Extremely High)**: **Update:** While initially assessed as low-risk, attempting this integration has revealed significant, unforeseen dependency conflicts and build-time errors. The complexity of the current environment makes this a high-risk change that is likely to break the application and has caused continuing stability issues. Proceeding requires a more in-depth architectural review.
 

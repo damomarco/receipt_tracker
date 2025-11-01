@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Receipt } from '../types';
 import { ReceiptItem } from './ReceiptItem';
 import { DownloadIcon, CalendarIcon, ChevronDownIcon } from './icons';
@@ -12,20 +12,22 @@ interface ReceiptListProps {
 export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) => {
   const { receipts } = useReceipts();
   
-  const groupedByMonth = receipts.reduce((acc, receipt) => {
-    const month = receipt.date.substring(0, 7); // YYYY-MM
-    const date = receipt.date;
-    if (!acc[month]) {
-      acc[month] = {};
-    }
-    if (!acc[month][date]) {
-        acc[month][date] = [];
-    }
-    acc[month][date].push(receipt);
-    return acc;
-  }, {} as Record<string, Record<string, Receipt[]>>);
+  const groupedByMonth = useMemo(() => {
+    return receipts.reduce((acc, receipt) => {
+      const month = receipt.date.substring(0, 7); // YYYY-MM
+      const date = receipt.date;
+      if (!acc[month]) {
+        acc[month] = {};
+      }
+      if (!acc[month][date]) {
+          acc[month][date] = [];
+      }
+      acc[month][date].push(receipt);
+      return acc;
+    }, {} as Record<string, Record<string, Receipt[]>>);
+  }, [receipts]);
 
-  const sortedMonths = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+  const sortedMonths = useMemo(() => Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a)), [groupedByMonth]);
 
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>(() => {
     if (sortedMonths.length > 0) {

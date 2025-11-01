@@ -5,7 +5,7 @@ import { Receipt, ReceiptItemData } from '../types';
 import { useReceipts } from '../contexts/ReceiptsContext';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, PlusCircleIcon, MapPinIcon } from './icons';
 import { ImageModal } from './ImageModal';
-import { getCategoryColorName, getCategoryDisplayClasses } from '../utils/colors';
+import { getCategoryStyling } from '../utils/colors';
 import { getImage } from '../services/imageStore';
 import { useCurrency } from '../contexts/CurrencyContext';
 
@@ -244,14 +244,13 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
             <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Items ({receipt.items.length})</h4>
             <div className="space-y-2">
                 {receipt.items.map((item, index) => {
-                    const colorName = getCategoryColorName(item.category);
-                    const tagClasses = getCategoryDisplayClasses(colorName);
+                    const styling = getCategoryStyling(item.category);
                     return (
                         <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                             <div className="flex-grow truncate mr-2">
                                 <p className="text-gray-800 dark:text-gray-200 truncate" title={item.description.translated}>{item.description.translated}</p>
                                 <div className="flex items-center mt-1">
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tagClasses}`}>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styling.tag}`}>
                                         {item.category}
                                     </span>
                                 </div>

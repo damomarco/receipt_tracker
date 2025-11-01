@@ -1,9 +1,8 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { processReceiptImage } from '../services/geminiService';
 import { ExtractedReceiptData, ReceiptItemData, Receipt } from '../types';
 import { PhotoIcon, XIcon, SpinnerIcon, TrashIcon, PlusCircleIcon, CameraIcon, CheckCircleIcon } from './icons';
+import { resizeImage } from '../utils/image';
 
 interface AddReceiptModalProps {
   onClose: () => void;
@@ -20,15 +19,6 @@ interface ProcessQueueItem {
     data?: ExtractedReceiptData;
     error?: string;
 }
-
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
-};
 
 export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipts, allCategories }) => {
   const [queue, setQueue] = useState<ProcessQueueItem[]>([]);
@@ -64,6 +54,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
         const itemToProcess = queue[nextItemIndex];
         
         try {
+            // The image data URL is already a base64 string, so we just need the data part.
             const base64Image = itemToProcess.imageDataUrl.split(',')[1];
             const data = await processReceiptImage(base64Image, allCategories, userLocation);
             setQueue(prev => prev.map((item, index) => 
@@ -88,7 +79,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
         Array.from(files).map(async file => ({
             file,
             status: 'queued' as ProcessStatus,
-            imageDataUrl: await fileToBase64(file),
+            imageDataUrl: await resizeImage(file),
         }))
     );
     setQueue(prev => [...prev, ...newItems]);
@@ -165,6 +156,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
             currency: data!.currency,
             items: data!.items,
         };
+        // The image is already resized, so we pass the smaller version.
         return { receiptData, imageBase64: imageDataUrl };
       });
 

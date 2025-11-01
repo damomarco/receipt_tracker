@@ -2,7 +2,7 @@ import React from 'react';
 import { Receipt, Category } from '../types';
 import { ChartBarIcon } from './icons';
 import { useReceipts } from '../contexts/ReceiptsContext';
-import { getCategoryColorName } from '../utils/colors';
+import { getCategoryStyling } from '../utils/colors';
 
 interface SpendingData {
   categories: Record<string, number>;
@@ -64,13 +64,12 @@ export const CategorySpendingChart: React.FC = () => {
               <div className="flex h-4 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700" role="progressbar" aria-label={`Spending breakdown for ${currency}`}>
                 {sortedCategories.map(({ category, total }) => {
                   const percentage = (total / overallTotal) * 100;
-                  const colorName = getCategoryColorName(category);
-                  const barColorClass = `bg-${colorName}-500`;
+                  const styling = getCategoryStyling(category);
                   
                   return (
                     <div
                       key={category}
-                      className={barColorClass}
+                      className={styling.bar}
                       style={{ width: `${percentage}%` }}
                       title={`${category}: ${percentage.toFixed(1)}%`}
                     />
@@ -82,13 +81,12 @@ export const CategorySpendingChart: React.FC = () => {
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                 {sortedCategories.map(({ category, total }) => {
                   const percentage = (total / overallTotal) * 100;
-                  const colorName = getCategoryColorName(category);
-                  const dotColorClass = `bg-${colorName}-500`;
+                  const styling = getCategoryStyling(category);
 
                   return (
                     <div key={category} className="flex justify-between items-center text-sm">
                       <div className="flex items-center truncate">
-                        <span className={`w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0 ${dotColorClass}`} />
+                        <span className={`w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0 ${styling.dot}`} />
                         <span className="text-gray-700 dark:text-gray-300 truncate" title={category}>{category}</span>
                         <span className="ml-2 text-gray-500 dark:text-gray-400">({percentage.toFixed(1)}%)</span>
                       </div>
