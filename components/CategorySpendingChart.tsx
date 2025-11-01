@@ -7,7 +7,8 @@ interface CategorySpendingChartProps {
   receipts: Receipt[];
 }
 
-// FIX: Define explicit types for spending data to help TypeScript's inference.
+// Fix: Define explicit types for the spending data structure to guide TypeScript's
+// type inference and prevent errors when accessing properties on the reduced object.
 interface SpendingData {
   categories: Record<string, number>;
   overallTotal: number;
@@ -15,8 +16,8 @@ interface SpendingData {
 type SpendingByCurrency = Record<string, SpendingData>;
 
 export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ receipts }) => {
-  // FIX: Cast the initial value of reduce to SpendingByCurrency to correctly type the accumulator.
-  // This resolves all subsequent type errors in the component.
+  // The initial value of reduce is cast to SpendingByCurrency to correctly type the accumulator.
+  // This resolves all subsequent TypeScript errors related to accessing properties on an 'unknown' type.
   const spendingByCurrency = receipts.reduce((acc, receipt) => {
     const currency = receipt.currency || 'UNKNOWN';
     if (!acc[currency]) {
