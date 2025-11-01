@@ -1,3 +1,18 @@
+
+export const CATEGORIES = [
+  'Food & Drink',
+  'Groceries',
+  'Transportation',
+  'Shopping',
+  'Lodging',
+  'Entertainment',
+  'Utilities',
+  'Health & Wellness',
+  'Other',
+] as const;
+
+export type Category = typeof CATEGORIES[number];
+
 export interface ReceiptItemData {
   description: {
     original: string;
@@ -17,6 +32,7 @@ export interface Receipt {
   total: number;
   currency: string;
   items: ReceiptItemData[];
+  category: Category;
   status: 'pending' | 'syncing' | 'synced';
 }
 
@@ -29,4 +45,5 @@ export interface ExtractedReceiptData {
   total: number;
   currency: string;
   items: ReceiptItemData[];
+  category: Category;
 }

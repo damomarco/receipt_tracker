@@ -46,7 +46,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({ imageSrc, onClose }) => 
       >
         <button
           onClick={onClose}
-          className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-white text-gray-800 rounded-full p-2 shadow-lg z-10 hover:bg-gray-200 transition-transform transform hover:scale-110"
+          className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-full p-2 shadow-lg z-10 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform transform hover:scale-110"
           aria-label="Close image viewer"
         >
           <XIcon className="w-6 h-6" />

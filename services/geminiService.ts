@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { ExtractedReceiptData } from "../types";
+import { ExtractedReceiptData, Receipt, CATEGORIES } from "../types";
 
 const API_KEY = process.env.API_KEY;
 
@@ -40,6 +41,11 @@ const receiptSchema = {
       type: Type.STRING,
       description: "The currency of the transaction (e.g., JPY, USD). Use the currency symbol or code from the receipt.",
     },
+    category: {
+        type: Type.STRING,
+        description: `Categorize the expense based on the merchant and items. Choose one of the following categories: ${CATEGORIES.join(', ')}. If unsure, use 'Other'.`,
+        enum: CATEGORIES,
+    },
     items: {
       type: Type.ARRAY,
       description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
@@ -69,7 +75,7 @@ const receiptSchema = {
       }
     }
   },
-  required: ['merchant', 'date', 'total', 'currency', 'items'],
+  required: ['merchant', 'date', 'total', 'currency', 'items', 'category'],
 };
 
 export const processReceiptImage = async (base64Image: string): Promise<ExtractedReceiptData> => {
@@ -81,7 +87,7 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
   };
 
   const textPart = {
-    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. Translate the merchant name and all item descriptions to English. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
+    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, an appropriate expense category, and a list of all purchased items with their prices. Translate the merchant name and all item descriptions to English. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
   };
 
   try {
@@ -98,7 +104,7 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
     const parsedData: ExtractedReceiptData = JSON.parse(jsonText);
 
     // Basic validation
-    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency || !Array.isArray(parsedData.items)) {
+    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency || !Array.isArray(parsedData.items) || !parsedData.category) {
       throw new Error("Extracted data is missing required fields.");
     }
     
@@ -121,27 +127,26 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
   }
 };
 
-export const askAboutImage = async (base64Image: string, prompt: string): Promise<string> => {
-  const imagePart = {
-    inlineData: {
-      mimeType: 'image/jpeg',
-      data: base64Image,
-    },
-  };
+export const askAboutAllReceipts = async (receipts: Receipt[], prompt: string): Promise<string> => {
+  if (receipts.length === 0) {
+    return "You haven't added any receipts yet. Please add some receipts to start asking questions.";
+  }
 
-  const textPart = {
-    text: prompt,
-  };
+  const contextPrompt = `You are a helpful assistant for managing travel expenses. Based on the following JSON data, which represents a list of receipts, please answer the user's question. Provide concise and helpful answers. Do not mention the JSON structure in your answer.
+
+Here is the receipt data:
+${JSON.stringify(receipts, null, 2)}
+
+User's question: "${prompt}"`;
 
   try {
     const response = await ai.models.generateContent({
       model: model,
-      contents: { parts: [imagePart, textPart] },
+      contents: contextPrompt,
     });
-
     return response.text;
   } catch (error) {
-    console.error("Error asking about image with Gemini API:", error);
+    console.error("Error querying about all receipts with Gemini API:", error);
     throw new Error("Failed to get an answer from the AI.");
   }
 };

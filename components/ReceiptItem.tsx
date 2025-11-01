@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Receipt } from '../types';
+import { Receipt, Category, CATEGORIES } from '../types';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, ChevronDownIcon, PlusCircleIcon } from './icons';
-import { askAboutImage } from '../services/geminiService';
 import { ImageModal } from './ImageModal';
 
 interface ReceiptItemProps {
@@ -9,6 +8,18 @@ interface ReceiptItemProps {
   onDelete: (id: string) => void;
   onUpdate: (receipt: Receipt) => void;
 }
+
+const categoryColorMap: Record<Category, string> = {
+  'Food & Drink': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+  'Groceries': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+  'Transportation': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
+  'Shopping': 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200',
+  'Lodging': 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
+  'Entertainment': 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200',
+  'Utilities': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200',
+  'Health & Wellness': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
+  'Other': 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+};
 
 const StatusIndicator: React.FC<{ status: Receipt['status'] }> = ({ status }) => {
   switch (status) {
@@ -29,13 +40,7 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
   const [isItemsVisible, setIsItemsVisible] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  // State for chat feature
-  const [chatPrompt, setChatPrompt] = useState('');
-  const [chatHistory, setChatHistory] = useState<{user: string, model: string}[]>([]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
-
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name.startsWith('merchant.')) {
         const key = name.split('.')[1] as 'original' | 'translated';
@@ -76,39 +81,16 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
   
   const handleCancel = () => {
     setEditedReceipt(receipt);
-    // Reset chat state on cancel
-    setChatHistory([]);
-    setChatPrompt('');
-    setChatError(null);
     setIsEditing(false);
   }
 
-  const handleAskGemini = async () => {
-    if (!chatPrompt.trim() || !receipt.image) return;
-
-    setIsChatLoading(true);
-    setChatError(null);
-    const currentPrompt = chatPrompt;
-    setChatPrompt('');
-
-    try {
-        const base64Image = receipt.image.split(',')[1];
-        const answer = await askAboutImage(base64Image, currentPrompt);
-        setChatHistory(prev => [...prev, { user: currentPrompt, model: answer }]);
-    } catch (err: any) {
-        setChatError(err.message || 'Failed to get a response.');
-    } finally {
-        setIsChatLoading(false);
-    }
-  };
-
   return (
     <>
-      <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
         <div className="flex justify-between items-start mb-2">
           <button 
             onClick={() => setIsImageModalOpen(true)}
-            className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             aria-label="View receipt image fullscreen"
           >
             <img 
@@ -121,13 +103,13 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
           <div className="flex items-start space-x-2 pl-4">
             {isEditing ? (
               <>
-                <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full" aria-label="Save changes"><SaveIcon className="w-6 h-6"/></button>
-                <button onClick={handleCancel} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Cancel edit"><CancelIcon className="w-6 h-6"/></button>
+                <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-full" aria-label="Save changes"><SaveIcon className="w-6 h-6"/></button>
+                <button onClick={handleCancel} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full" aria-label="Cancel edit"><CancelIcon className="w-6 h-6"/></button>
               </>
             ) : (
               <>
-                <button onClick={() => setIsEditing(true)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full" aria-label="Edit receipt"><EditIcon className="w-6 h-6"/></button>
-                <button onClick={() => onDelete(receipt.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-6 h-6"/></button>
+                <button onClick={() => setIsEditing(true)} className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full" aria-label="Edit receipt"><EditIcon className="w-6 h-6"/></button>
+                <button onClick={() => onDelete(receipt.id)} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-6 h-6"/></button>
               </>
             )}
           </div>
@@ -136,106 +118,70 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
         <div className="w-full">
           {isEditing ? (
               <div className="space-y-2">
-                  <input type="text" name="merchant.translated" value={editedReceipt.merchant.translated} onChange={handleEditChange} className="w-full p-1 border rounded text-lg font-semibold" placeholder="Merchant (EN)"/>
-                  <input type="text" name="merchant.original" value={editedReceipt.merchant.original} onChange={handleEditChange} className="w-full p-1 border rounded text-sm text-gray-500" placeholder="Merchant (JP)"/>
-                  <input type="date" name="date" value={editedReceipt.date} onChange={handleEditChange} className="w-full p-1 border rounded"/>
+                  <input type="text" name="merchant.translated" value={editedReceipt.merchant.translated} onChange={handleEditChange} className="w-full p-1 border rounded text-lg font-semibold bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Merchant (EN)"/>
+                  <input type="text" name="merchant.original" value={editedReceipt.merchant.original} onChange={handleEditChange} className="w-full p-1 border rounded text-sm bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400" placeholder="Merchant (JP)"/>
+                  <input type="date" name="date" value={editedReceipt.date} onChange={handleEditChange} className="w-full p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"/>
+                  <select name="category" value={editedReceipt.category} onChange={handleEditChange} className="w-full p-1.5 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                      {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                   <div className="flex space-x-2">
-                      <input type="number" name="total" value={editedReceipt.total} onChange={handleEditChange} className="w-1/2 p-1 border rounded" placeholder="Total"/>
-                      <input type="text" name="currency" value={editedReceipt.currency} onChange={handleEditChange} className="w-1/2 p-1 border rounded" placeholder="Currency"/>
+                      <input type="number" name="total" value={editedReceipt.total} onChange={handleEditChange} className="w-1/2 p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Total"/>
+                      <input type="text" name="currency" value={editedReceipt.currency} onChange={handleEditChange} className="w-1/2 p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Currency"/>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-md font-medium text-gray-800 mb-2">Items</h3>
+                  <div className="mt-4 pt-4 border-t dark:border-gray-700">
+                    <h3 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">Items</h3>
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                       {(editedReceipt.items || []).map((item, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-5">
-                            <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-3">
-                            <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-3">
-                            <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-1">
-                            <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
+                            <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3">
+                    <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-3">
                         <PlusCircleIcon className="w-5 h-5" />
                         <span>Add Item</span>
                     </button>
-                  </div>
-
-                  {/* AI Chat Section */}
-                  <div className="mt-6 pt-4 border-t">
-                    <h3 className="text-md font-semibold text-gray-800">Ask about this receipt</h3>
-                    <div className="space-y-2 max-h-32 overflow-y-auto my-2 p-2 bg-gray-50 rounded-md border">
-                      {chatHistory.map((chat, index) => (
-                        <div key={index}>
-                          <p className="font-semibold text-gray-700 text-sm">{chat.user}</p>
-                          <p className="text-gray-600 text-sm whitespace-pre-wrap">{chat.model}</p>
-                        </div>
-                      ))}
-                      {isChatLoading && (
-                        <div className="flex justify-center items-center p-2">
-                            <SpinnerIcon className="w-5 h-5 text-blue-600" />
-                        </div>
-                      )}
-                      {chatError && <p className="text-red-500 text-sm">{chatError}</p>}
-                      {chatHistory.length === 0 && !isChatLoading && !chatError && (
-                        <p className="text-gray-400 text-sm text-center p-2">Ask a question to get more details.</p>
-                      )}
-                    </div>
-              
-                    <div className="flex space-x-2">
-                      <input 
-                        type="text" 
-                        value={chatPrompt}
-                        onChange={(e) => setChatPrompt(e.target.value)}
-                        placeholder="e.g., What items are listed?"
-                        className="flex-grow border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && handleAskGemini()}
-                        disabled={isChatLoading}
-                      />
-                      <button 
-                        onClick={handleAskGemini} 
-                        disabled={isChatLoading || !chatPrompt.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition disabled:bg-blue-300 disabled:cursor-not-allowed"
-                        aria-label="Ask Gemini about the receipt"
-                      >
-                        Ask
-                      </button>
-                    </div>
                   </div>
               </div>
           ) : (
               <>
                   <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-800">{receipt.merchant.translated}</h3>
-                        <p className="text-sm text-gray-500 italic">{receipt.merchant.original}</p>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{receipt.merchant.translated}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mb-2">{receipt.merchant.original}</p>
+                        <span className={`text-xs font-semibold mr-2 px-2.5 py-1 rounded-full ${categoryColorMap[receipt.category] || categoryColorMap['Other']}`}>
+                          {receipt.category}
+                        </span>
                       </div>
                       <StatusIndicator status={receipt.status} />
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-blue-600">
+                  <p className="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(receipt.total)}
                   </p>
                   {receipt.items && receipt.items.length > 0 && (
                     <div className="mt-3">
-                      <button onClick={() => setIsItemsVisible(!isItemsVisible)} className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-medium py-1">
+                      <button onClick={() => setIsItemsVisible(!isItemsVisible)} className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium py-1">
                         <span>{isItemsVisible ? 'Hide' : 'Show'} {receipt.items.length} item{receipt.items.length > 1 ? 's' : ''}</span>
                         <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isItemsVisible ? 'rotate-180' : ''}`} />
                       </button>
                       {isItemsVisible && (
-                        <ul className="mt-2 pl-4 border-l-2 border-gray-200 space-y-1 text-sm">
+                        <ul className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-600 space-y-1 text-sm">
                           {receipt.items.map((item, index) => (
                             <li key={index} className="flex justify-between">
-                              <span className="text-gray-700 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
-                              <span className="text-gray-800 font-medium flex-shrink-0">
+                              <span className="text-gray-700 dark:text-gray-300 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
+                              <span className="text-gray-800 dark:text-gray-100 font-medium flex-shrink-0">
                                 {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
                               </span>
                             </li>

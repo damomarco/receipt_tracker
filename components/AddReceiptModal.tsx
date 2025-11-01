@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { processReceiptImage, askAboutImage } from '../services/geminiService';
-import { Receipt, ExtractedReceiptData } from '../types';
+import { processReceiptImage } from '../services/geminiService';
+import { Receipt, ExtractedReceiptData, CATEGORIES } from '../types';
 import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon, PlusCircleIcon, TrashIcon } from './icons';
 
 interface AddReceiptModalProps {
@@ -16,12 +16,6 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
   const [error, setError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-
-  // State for chat feature
-  const [chatPrompt, setChatPrompt] = useState('');
-  const [chatHistory, setChatHistory] = useState<{user: string, model: string}[]>([]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,25 +45,6 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
       setIsLoading(false);
     }
   };
-  
-  const handleAskGemini = async () => {
-    if (!chatPrompt.trim() || !image) return;
-
-    setIsChatLoading(true);
-    setChatError(null);
-    const currentPrompt = chatPrompt;
-    setChatPrompt('');
-
-    try {
-      const base64Image = image.split(',')[1];
-      const answer = await askAboutImage(base64Image, currentPrompt);
-      setChatHistory(prev => [...prev, { user: currentPrompt, model: answer }]);
-    } catch (err: any) {
-      setChatError(err.message || 'Failed to get a response.');
-    } finally {
-      setIsChatLoading(false);
-    }
-  };
 
   const handleSave = () => {
     if (extractedData && image) {
@@ -80,7 +55,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }
   };
 
-  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (!extractedData) return;
 
@@ -131,18 +106,18 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-semibold">Add New Receipt</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><XIcon className="w-6 h-6"/></button>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add New Receipt</h2>
+          <button onClick={onClose} className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><XIcon className="w-6 h-6"/></button>
         </div>
 
         <div className="p-6 overflow-y-auto">
           {!image ? (
-            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg text-center p-6">
-              <ReceiptIcon className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-700">Add a receipt</h3>
-              <p className="text-sm text-gray-500 mb-6">Choose how you'd like to add your receipt image.</p>
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center p-6">
+              <ReceiptIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Add a receipt</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Choose how you'd like to add your receipt image.</p>
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full justify-center">
                 <button onClick={triggerCameraInput} className="flex items-center justify-center space-x-2 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
                     <CameraIcon className="w-6 h-6"/>
@@ -172,112 +147,74 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
           ) : (
             <div className="space-y-4">
               <div className="relative">
-                <img src={image} alt="Receipt preview" className="w-full max-h-60 object-contain rounded-lg bg-gray-100" />
+                <img src={image} alt="Receipt preview" className="w-full max-h-60 object-contain rounded-lg bg-gray-100 dark:bg-gray-700" />
                 {isLoading && (
-                  <div className="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center rounded-lg">
-                    <SpinnerIcon className="w-12 h-12 text-blue-600" />
-                    <p className="mt-2 text-gray-700 font-medium">Analyzing receipt...</p>
+                  <div className="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-80 dark:bg-opacity-80 flex flex-col items-center justify-center rounded-lg">
+                    <SpinnerIcon className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+                    <p className="mt-2 text-gray-700 dark:text-gray-200 font-medium">Analyzing receipt...</p>
                   </div>
                 )}
               </div>
               
-              {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">{error}</div>}
+              {error && <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-300 px-4 py-3 rounded relative" role="alert">{error}</div>}
               
               {extractedData && (
                 <>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Merchant (English)</label>
-                      <input type="text" name="merchant.translated" value={extractedData.merchant.translated} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Merchant (English)</label>
+                      <input type="text" name="merchant.translated" value={extractedData.merchant.translated} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Merchant (Original)</label>
-                      <input type="text" name="merchant.original" value={extractedData.merchant.original} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Merchant (Original)</label>
+                      <input type="text" name="merchant.original" value={extractedData.merchant.original} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Date</label>
-                      <input type="date" name="date" value={extractedData.date} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                      <input type="date" name="date" value={extractedData.date} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Total Amount</label>
-                        <input type="number" name="total" value={extractedData.total} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                        <select name="category" value={extractedData.category} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                      </div>
+                       <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Total Amount</label>
+                        <input type="number" name="total" value={extractedData.total} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Currency</label>
-                        <input type="text" name="currency" value={extractedData.currency} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                        <input type="text" name="currency" value={extractedData.currency} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-md font-medium text-gray-800 mb-2">Items</h3>
+                  <div className="mt-4 pt-4 border-t dark:border-gray-600">
+                    <h3 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">Items</h3>
                     <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
                       {extractedData.items.map((item, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-5">
-                            <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-3">
-                            <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-3">
-                            <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
                           <div className="col-span-1 flex justify-end">
-                            <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
+                            <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3">
+                    <button onClick={handleAddItem} className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-3">
                         <PlusCircleIcon className="w-5 h-5" />
                         <span>Add Item</span>
                     </button>
-                  </div>
-
-
-                  <div className="mt-6 pt-4 border-t">
-                    <h3 className="text-lg font-medium text-gray-800">Ask about this receipt</h3>
-                    <p className="text-sm text-gray-500 mb-3">Get more details from the image, like a list of items.</p>
-                    
-                    <div className="space-y-2 max-h-32 overflow-y-auto mb-3 p-2 bg-gray-50 rounded-md border">
-                      {chatHistory.map((chat, index) => (
-                        <div key={index}>
-                          <p className="font-semibold text-gray-700 text-sm">{chat.user}</p>
-                          <p className="text-gray-600 text-sm whitespace-pre-wrap">{chat.model}</p>
-                        </div>
-                      ))}
-                      {isChatLoading && (
-                        <div className="flex justify-center items-center p-2">
-                           <SpinnerIcon className="w-5 h-5 text-blue-600" />
-                        </div>
-                      )}
-                      {chatError && <p className="text-red-500 text-sm">{chatError}</p>}
-                      {chatHistory.length === 0 && !isChatLoading && !chatError && (
-                        <p className="text-gray-400 text-sm text-center p-4">Ask a question to start the conversation.</p>
-                      )}
-                    </div>
-              
-                    <div className="flex space-x-2">
-                      <input 
-                        type="text" 
-                        value={chatPrompt}
-                        onChange={(e) => setChatPrompt(e.target.value)}
-                        placeholder="e.g., What items were purchased?"
-                        className="flex-grow border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && handleAskGemini()}
-                        disabled={isChatLoading}
-                      />
-                      <button 
-                        onClick={handleAskGemini} 
-                        disabled={isChatLoading || !chatPrompt.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition disabled:bg-blue-300 disabled:cursor-not-allowed"
-                        aria-label="Ask Gemini about the receipt"
-                      >
-                        Ask
-                      </button>
-                    </div>
                   </div>
                 </>
               )}
@@ -285,8 +222,8 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
           )}
         </div>
 
-        <div className="p-4 border-t bg-gray-50 flex justify-end space-x-3">
-          <button onClick={onClose} className="bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-md shadow-sm transition">Cancel</button>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end space-x-3">
+          <button onClick={onClose} className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm transition">Cancel</button>
           <button onClick={handleSave} disabled={!extractedData || isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition disabled:bg-blue-300 disabled:cursor-not-allowed">
             {isLoading ? 'Processing...' : 'Save Receipt'}
           </button>

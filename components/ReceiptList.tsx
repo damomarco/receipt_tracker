@@ -39,9 +39,9 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, onDelete, on
 
   if (receipts.length === 0) {
     return (
-      <div className="text-center py-20 px-6 bg-white rounded-lg shadow-sm">
-        <h2 className="text-2xl font-semibold text-gray-700">No receipts yet</h2>
-        <p className="mt-2 text-gray-500">Tap the '+' button to add your first receipt.</p>
+      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">No receipts yet</h2>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">Tap the '+' button to add your first receipt.</p>
       </div>
     );
   }
@@ -59,17 +59,17 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, onDelete, on
         });
         
         return (
-          <div key={date} className="bg-white rounded-lg shadow-md transition-all duration-300">
+          <div key={date} className="bg-white dark:bg-gray-800/50 rounded-lg shadow-md transition-all duration-300">
             <div
-              className="flex justify-between items-center p-4 md:p-6 cursor-pointer hover:bg-gray-50 rounded-lg"
+              className="flex justify-between items-center p-4 md:p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
               onClick={() => toggleDateExpansion(date)}
               role="button"
               aria-expanded={isExpanded}
               aria-controls={`receipts-for-${date}`}
             >
               <div className="flex items-center space-x-3">
-                <CalendarIcon className="w-6 h-6 text-gray-500" />
-                <h2 className="text-xl font-bold text-gray-800">{formattedDate}</h2>
+                <CalendarIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{formattedDate}</h2>
               </div>
               <div className="flex items-center space-x-4">
                 <button
@@ -77,19 +77,19 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, onDelete, on
                     e.stopPropagation();
                     exportToCSV(groupedReceipts[date], date);
                   }}
-                  className="flex items-center space-x-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-md transition-colors"
+                  className="flex items-center space-x-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-3 rounded-md transition-colors"
                   aria-label={`Export receipts for ${formattedDate} to CSV`}
                 >
                   <DownloadIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">Export</span>
                 </button>
-                <ChevronDownIcon className={`w-5 h-5 text-gray-500 transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} />
               </div>
             </div>
             
             {isExpanded && (
               <div id={`receipts-for-${date}`} className="px-4 md:px-6 pb-4 md:pb-6">
-                <div className="space-y-4 border-t border-gray-200 pt-4">
+                <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                   {groupedReceipts[date].map(receipt => (
                     <ReceiptItem key={receipt.id} receipt={receipt} onDelete={onDelete} onUpdate={onUpdate} />
                   ))}
