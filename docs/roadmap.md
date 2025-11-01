@@ -1,3 +1,4 @@
+
 # Project Roadmap
 
 This document outlines the planned features and future direction for the Travel Receipt Manager application.
@@ -5,6 +6,14 @@ This document outlines the planned features and future direction for the Travel 
 ## Short-Term Goals (Next 1-3 Months)
 
 ### Recently Completed
+
+-   **Migrate Image Storage to IndexedDB**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Re-architected data persistence to move image storage from `localStorage` to IndexedDB. This solves the 5-10MB storage limit, significantly improves performance, and makes the app scalable for users with many receipts.
+
+-   **Batch Uploads**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented the ability for users to select and upload multiple receipt images at once. The UI now includes a processing queue, making data entry for multiple receipts much more efficient.
 
 -   **AI Location Detection**:
     -   **Status**: ✅ **Done**
@@ -14,10 +23,6 @@ This document outlines the planned features and future direction for the Travel 
     -   **Status**: ✅ **Done**
     -   **Description**: Implemented a settings modal allowing users to add, edit, and delete their own custom expense categories. These categories are now used by the Gemini AI and throughout the app's UI.
 
--   **Performance Optimization & Code Refactor**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: Conducted a full code audit. Refactored state management to use React Context, eliminating prop drilling. Memoized expensive calculations for a more responsive UI and implemented dynamic coloring for custom categories.
-
 -   **Expense Categorization**:
     -   **Status**: ✅ **Done**
     -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
@@ -25,13 +30,11 @@ This document outlines the planned features and future direction for the Travel 
     -   **Status**: ✅ **Done**
     -   **Description**: Implemented a "Spending Summary" view that shows total expenses and a segmented bar chart that visualizes spending by category.
 
-### Planned
-
 -   **Enhanced Reporting Filtering**:
-    -   **Status**: Planned
-    -   **Description**: Add date-range filters to the "Spending Summary" to allow users to visualize their spending over specific periods (e.g., last 7 days, specific trip dates).
-    -   **Reward (High)**: Transforms the summary from a static overview into a dynamic analysis tool. This is a core feature for any expense tracker, allowing users to budget and analyze specific trips or time periods.
-    -   **Risk (Low)**: The implementation is straightforward. The main task is creating an intuitive date-range picker UI. The existing app architecture supports this change easily.
+    -   **Status**: ✅ **Done**
+    -   **Description**: Integrated date-range filters into the "Spending Summary" section. Users can now select start and end dates to filter the summary stats and category charts, allowing for analysis of specific trips or time periods.
+
+### Planned
 
 -   **Improved Currency Conversion**:
     -   **Status**: Planned
@@ -43,12 +46,13 @@ This document outlines the planned features and future direction for the Travel 
     -   **Status**: Planned
     -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization.
     -   **Reward (Very High)**: A foundational step for a production-grade application. It will dramatically improve performance (faster load times), enhance the developer experience, and unlock further optimizations.
-    -   **Risk (Low)**: This is a standard, well-documented process. The only "risk" is the initial time investment for setup, which is heavily outweighed by the long-term benefits.
+    -   **Risk (Extremely High)**: **Update:** While initially assessed as low-risk, attempting this integration has revealed significant, unforeseen dependency conflicts and build-time errors. The complexity of the current environment makes this a high-risk change that is likely to break the application and has caused continuing stability issues. Proceeding requires a more in-depth architectural review.
 
 ## Medium-Term Goals (3-6 Months)
 
 -   **Cloud Backup & Multi-Device Sync**:
-    -   **Description**: Move beyond `localStorage` to a cloud-based solution (e.g., Firebase Firestore) and implement user authentication.
+    -   **Description**: Move beyond local-only storage to a cloud-based solution (e.g., Firebase Firestore & Cloud Storage) and implement user authentication.
+    -   **Migration Path**: The current architecture using `services/imageStore.ts` as an abstraction for IndexedDB is a perfect stepping stone. Migration would involve changing the implementation of `saveImage`, `getImage`, etc., to interact with a cloud storage bucket instead of the local DB, leaving the rest of the application logic largely untouched.
     -   **Reward (Critical)**: Prevents data loss if a device is lost/broken and enables a seamless multi-device experience. This is a prerequisite for long-term user retention.
     -   **Risk (High)**: A significant architectural change. It introduces a backend, authentication, security rules, and complex data synchronization logic (handling offline edits, merge conflicts, etc.).
 
@@ -63,11 +67,6 @@ This document outlines the planned features and future direction for the Travel 
     -   **Risk (Medium)**: Requires significant data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips. Care must be taken to migrate existing data for current users.
 
 ## Long-Term Goals (6+ Months)
-
--   **Batch Uploads**:
-    -   **Description**: Allow users to select and upload multiple receipt images at once, processing them in a queue.
-    -   **Reward (Medium)**: A great quality-of-life improvement, especially for users adding many receipts at the end of a trip. Reduces repetitive actions.
-    -   **Risk (Medium)**: Requires building a robust UI queueing system to handle multiple uploads, display progress, and manage potential failures for individual images.
 
 -   **UI Internationalization (i18n)**:
     -   **Description**: Localize the application's user interface into multiple languages.

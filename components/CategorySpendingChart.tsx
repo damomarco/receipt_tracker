@@ -34,7 +34,6 @@ export const CategorySpendingChart: React.FC = () => {
 
   const currencyEntries = Object.entries(spendingByCurrency);
 
-  // Fix: Cast `data` to `SpendingData` to correctly access `overallTotal`.
   if (currencyEntries.length === 0 || currencyEntries.every(([, data]) => (data as SpendingData).overallTotal <= 0)) {
     return null;
   }
@@ -48,7 +47,6 @@ export const CategorySpendingChart: React.FC = () => {
       
       <div className="space-y-6">
         {currencyEntries.map(([currency, data]) => {
-          // Fix: Cast `data` to `SpendingData` to resolve type errors.
           const { categories, overallTotal } = data as SpendingData;
           const sortedCategories = Object.entries(categories)
             .map(([category, total]) => ({ category: category as Category, total }))

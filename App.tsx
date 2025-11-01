@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AddReceiptModal } from './components/AddReceiptModal';
 import { Header } from './components/Header';
 import { ReceiptList } from './components/ReceiptList';
@@ -10,6 +11,7 @@ import { GlobalChatModal } from './components/GlobalChatModal';
 import { SpendingSummary } from './components/SpendingSummary';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 import { ReceiptsProvider } from './contexts/ReceiptsContext';
+import { saveImage, deleteImage } from './services/imageStore';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,9 +19,34 @@ function App() {
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [receipts, setReceipts] = useLocalStorage<Receipt[]>('receipts', []);
   const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
+  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const isOnline = useOnlineStatus();
+  const prevReceiptsCount = useRef(receipts.length);
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories].sort();
+
+  useEffect(() => {
+    const wasEmpty = prevReceiptsCount.current === 0;
+    const isEmpty = receipts.length === 0;
+
+    // Prefill date filter on initial load or when adding the first receipt
+    if (wasEmpty && !isEmpty) {
+      let min = receipts[0].date;
+      let max = receipts[0].date;
+      receipts.forEach(receipt => {
+        if (receipt.date < min) min = receipt.date;
+        if (receipt.date > max) max = receipt.date;
+      });
+      setDateFilter({ start: min, end: max });
+    } 
+    // Clear date filter when the last receipt is deleted
+    else if (!wasEmpty && isEmpty) {
+      setDateFilter({ start: '', end: '' });
+    }
+
+    // Update the ref for the next render cycle
+    prevReceiptsCount.current = receipts.length;
+  }, [receipts]);
 
   useEffect(() => {
     // One-time data migration for item-level categories
@@ -60,19 +87,57 @@ function App() {
     }
   }, [isOnline, receipts, setReceipts]);
 
-  const addReceipt = (newReceiptData: Omit<Receipt, 'id' | 'status'>) => {
+  const addReceipt = async (newReceiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string) => {
     const newReceipt: Receipt = {
       id: new Date().toISOString() + Math.random(), // Add random number to ensure unique ID
       ...newReceiptData,
       items: newReceiptData.items || [], // Ensure items is always an array
       status: isOnline ? 'synced' : 'pending',
     };
-    setReceipts(prevReceipts => [...prevReceipts, newReceipt].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    setIsModalOpen(false);
+    
+    try {
+      // Save the large image data to IndexedDB first
+      await saveImage(newReceipt.id, imageBase64);
+      // Then, save the smaller receipt metadata to localStorage
+      setReceipts(prevReceipts => [...prevReceipts, newReceipt].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    } catch (error) {
+        console.error("Failed to save receipt image:", error);
+        // Handle the error, maybe show a notification to the user
+    }
   };
   
-  const deleteReceipt = (id: string) => {
+  const addMultipleReceipts = async (receiptsToAdd: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string }[]) => {
+    const newReceipts: Receipt[] = [];
+    for (const { receiptData, imageBase64 } of receiptsToAdd) {
+        const newReceipt: Receipt = {
+            id: new Date().toISOString() + Math.random(),
+            ...receiptData,
+            items: receiptData.items || [],
+            status: isOnline ? 'synced' : 'pending',
+        };
+        try {
+            await saveImage(newReceipt.id, imageBase64);
+            newReceipts.push(newReceipt);
+        } catch (error) {
+            console.error(`Failed to save image for receipt. Skipping this receipt.`, error);
+        }
+    }
+
+    setReceipts(prevReceipts => [...prevReceipts, ...newReceipts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setIsModalOpen(false);
+};
+
+  
+  const deleteReceipt = async (id: string) => {
+    // First remove metadata from localStorage
     setReceipts(prevReceipts => prevReceipts.filter(receipt => receipt.id !== id));
+    try {
+        // Then remove the image from IndexedDB
+        await deleteImage(id);
+    } catch (error) {
+        console.error("Failed to delete receipt image:", error);
+        // If this fails, we might have an orphaned image, but the app will still function.
+    }
   };
 
   const updateReceipt = (updatedReceipt: Receipt) => {
@@ -124,8 +189,20 @@ function App() {
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
 
+  const filteredReceipts = useMemo(() => {
+    if (!dateFilter.start && !dateFilter.end) {
+      return receipts;
+    }
+    return receipts.filter(receipt => {
+      const receiptDate = receipt.date;
+      const isAfterStart = !dateFilter.start || receiptDate >= dateFilter.start;
+      const isBeforeEnd = !dateFilter.end || receiptDate <= dateFilter.end;
+      return isAfterStart && isBeforeEnd;
+    });
+  }, [receipts, dateFilter]);
+
   const receiptsContextValue = {
-    receipts,
+    receipts: filteredReceipts,
     deleteReceipt,
     updateReceipt,
     allCategories,
@@ -141,8 +218,8 @@ function App() {
           onManageCategories={() => setIsCategoriesModalOpen(true)}
         />
         <main className="flex-grow container mx-auto p-4 md:p-6">
-          <SpendingSummary />
-          <ReceiptList />
+          <SpendingSummary dateFilter={dateFilter} setDateFilter={setDateFilter} />
+          <ReceiptList totalReceiptCount={receipts.length} />
         </main>
         
         <button
@@ -164,7 +241,7 @@ function App() {
         {isModalOpen && (
           <AddReceiptModal
             onClose={() => setIsModalOpen(false)}
-            onAddReceipt={addReceipt}
+            onAddReceipts={addMultipleReceipts}
             allCategories={allCategories}
           />
         )}

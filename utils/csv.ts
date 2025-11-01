@@ -7,7 +7,7 @@ export const exportToCSV = (receipts: Receipt[], date: string) => {
     return;
   }
 
-  const headers = ['Date', 'Merchant (Original)', 'Merchant (Translated)', 'Total Amount', 'Currency', 'Items (JSON)', 'Image URL'];
+  const headers = ['Date', 'Merchant (Original)', 'Merchant (Translated)', 'Total Amount', 'Currency', 'Items (JSON)', 'Image ID (Stored Locally)'];
   const rows = receipts.map(receipt => [
     receipt.date,
     `"${receipt.merchant.original.replace(/"/g, '""')}"`,
@@ -15,7 +15,7 @@ export const exportToCSV = (receipts: Receipt[], date: string) => {
     receipt.total,
     receipt.currency,
     `"${JSON.stringify(receipt.items || []).replace(/"/g, '""')}"`,
-    receipt.image // Note: This will be a very long data URL
+    receipt.id
   ]);
 
   const csvContent = "data:text/csv;charset=utf-8," 

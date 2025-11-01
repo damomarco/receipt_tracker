@@ -5,7 +5,11 @@ import { DownloadIcon, CalendarIcon, ChevronDownIcon } from './icons';
 import { exportToCSV } from '../utils/csv';
 import { useReceipts } from '../contexts/ReceiptsContext';
 
-export const ReceiptList: React.FC = () => {
+interface ReceiptListProps {
+  totalReceiptCount: number;
+}
+
+export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) => {
   const { receipts } = useReceipts();
   
   const groupedReceipts = receipts.reduce((acc, receipt) => {
@@ -34,7 +38,7 @@ export const ReceiptList: React.FC = () => {
     }));
   };
 
-  if (receipts.length === 0) {
+  if (totalReceiptCount === 0) {
     return (
       <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">No receipts yet</h2>
@@ -42,6 +46,16 @@ export const ReceiptList: React.FC = () => {
       </div>
     );
   }
+
+  if (receipts.length === 0) {
+    return (
+      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">No Receipts Found</h2>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">No receipts match the current date filter. Try adjusting the dates or clearing the filter.</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-4">

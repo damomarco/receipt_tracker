@@ -1,5 +1,5 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-// FIX: Import the 'Receipt' type to resolve a type error.
 import { ExtractedReceiptData, Receipt } from "../types";
 
 const API_KEY = process.env.API_KEY;
@@ -148,8 +148,8 @@ export const askAboutAllReceipts = async (receipts: Receipt[], prompt: string): 
     return "You haven't added any receipts yet. Please add some receipts to start asking questions.";
   }
 
-  // Sanitize receipts for the prompt to remove the base64 image data
-  const sanitizedReceipts = receipts.map(({ image, ...rest }) => rest);
+  // Sanitize receipts for the prompt to remove properties not useful to the AI
+  const sanitizedReceipts = receipts.map(({ id, status, ...rest }) => rest);
 
   const contextPrompt = `You are a helpful assistant for managing travel expenses. Based on the following JSON data, which represents a list of receipts, please answer the user's question. The 'items' array in each receipt contains individual products with their own categories. Provide concise and helpful answers. Do not mention the JSON structure in your answer.
 

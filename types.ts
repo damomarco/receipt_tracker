@@ -26,7 +26,6 @@ export interface ReceiptItemData {
 
 export interface Receipt {
   id: string;
-  image: string; // base64 data URL
   merchant: {
     original: string;
     translated: string;

@@ -1,305 +1,266 @@
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { processReceiptImage } from '../services/geminiService';
 import { ExtractedReceiptData, ReceiptItemData, Receipt } from '../types';
-import { PhotoIcon, XIcon, SpinnerIcon, TrashIcon, PlusCircleIcon, CameraIcon } from './icons';
+import { PhotoIcon, XIcon, SpinnerIcon, TrashIcon, PlusCircleIcon, CameraIcon, CheckCircleIcon } from './icons';
 
 interface AddReceiptModalProps {
   onClose: () => void;
-  onAddReceipt: (receipt: Omit<Receipt, 'id' | 'status'>) => void;
+  onAddReceipts: (receipts: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string }[]) => void;
   allCategories: string[];
 }
 
-export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipt, allCategories }) => {
-  const [image, setImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [receiptData, setReceiptData] = useState<ExtractedReceiptData | null>(null);
+type ProcessStatus = 'queued' | 'processing' | 'done' | 'error';
+
+interface ProcessQueueItem {
+    file: File;
+    status: ProcessStatus;
+    imageDataUrl: string;
+    data?: ExtractedReceiptData;
+    error?: string;
+}
+
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+};
+
+export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipts, allCategories }) => {
+  const [queue, setQueue] = useState<ProcessQueueItem[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
-    // Attempt to get the user's location when the modal is opened.
-    // This will be used as a hint for the AI.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          // User likely denied permission or an error occurred.
-          // Proceed gracefully without location data.
-          console.warn(`Could not get geolocation: ${error.message}`);
-          setUserLocation(null);
-        }
+        (position) => setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }),
+        (error) => console.warn(`Could not get geolocation: ${error.message}`)
       );
     }
-  }, []); // Run only once when the modal mounts
+  }, []);
 
-  const handleImageChange = async (file: File) => {
-    if (!file) return;
+  useEffect(() => {
+    const processNextInQueue = async () => {
+        if (isProcessingRef.current) return;
+        const nextItemIndex = queue.findIndex(item => item.status === 'queued');
+        if (nextItemIndex === -1) return;
 
-    setIsLoading(true);
-    setError(null);
-    setReceiptData(null);
-
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Image = (reader.result as string).split(',')[1];
-        setImage(reader.result as string);
+        isProcessingRef.current = true;
+        
+        setQueue(prev => prev.map((item, index) => 
+            index === nextItemIndex ? { ...item, status: 'processing' } : item
+        ));
+        
+        const itemToProcess = queue[nextItemIndex];
+        
         try {
-          // Pass the user's location to the processing service
-          const data = await processReceiptImage(base64Image, allCategories, userLocation);
-          setReceiptData(data);
+            const base64Image = itemToProcess.imageDataUrl.split(',')[1];
+            const data = await processReceiptImage(base64Image, allCategories, userLocation);
+            setQueue(prev => prev.map((item, index) => 
+                index === nextItemIndex ? { ...item, status: 'done', data } : item
+            ));
         } catch (e: any) {
-          setError(e.message || "Failed to process the receipt.");
-          setImage(null);
+            setQueue(prev => prev.map((item, index) => 
+                index === nextItemIndex ? { ...item, status: 'error', error: e.message || "Failed to process receipt." } : item
+            ));
         } finally {
-          setIsLoading(false);
+            isProcessingRef.current = false;
         }
-      };
-      reader.readAsDataURL(file);
-    } catch (e: any) {
-      setError(e.message || "Failed to handle image.");
-      setIsLoading(false);
-    }
+    };
+    
+    processNextInQueue();
+  }, [queue, allCategories, userLocation]);
+
+  const handleFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    const newItems: ProcessQueueItem[] = await Promise.all(
+        Array.from(files).map(async file => ({
+            file,
+            status: 'queued' as ProcessStatus,
+            imageDataUrl: await fileToBase64(file),
+        }))
+    );
+    setQueue(prev => [...prev, ...newItems]);
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      handleImageChange(event.target.files[0]);
-    }
-    // Reset file input to allow selecting the same file again
-    if(event.target) {
-      event.target.value = '';
-    }
+  const handleFileSelectEvent = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFilesSelected(event.target.files);
+    if(event.target) event.target.value = '';
   };
 
-  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (receiptData) {
-      setReceiptData({
-        ...receiptData,
-        location: {
-          determined: e.target.value,
-          suggestions: receiptData.location?.suggestions || [],
-        }
-      });
-    }
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    if (receiptData && receiptData.location) {
-      const currentDetermined = receiptData.location.determined.toLowerCase();
-      const suggestionsLower = receiptData.location.suggestions.map(s => s.toLowerCase());
-
-      let newLocationValue = suggestion;
-      // If the current determined value doesn't seem to be one of the countries, prepend it.
-      if (currentDetermined && !suggestionsLower.some(s => currentDetermined.includes(s))) {
-        newLocationValue = `${receiptData.location.determined}, ${suggestion}`;
+  const handleItemChange = (itemIndex: number, field: keyof ExtractedReceiptData, value: any) => {
+    setQueue(prev => prev.map((item, index) => {
+      if (index === itemIndex && item.data) {
+        const newData = { ...item.data, [field]: value };
+        return { ...item, data: newData };
       }
-
-      setReceiptData({
-        ...receiptData,
-        location: {
-          ...receiptData.location,
-          determined: newLocationValue,
-        },
-      });
-    }
+      return item;
+    }));
   };
   
-  const handleItemChange = (index: number, field: keyof ReceiptItemData, value: any) => {
-    if (receiptData) {
-      const newItems = [...receiptData.items];
-      const itemToUpdate = { ...newItems[index] };
-
-      if (field === 'description') {
-        itemToUpdate.description = { ...itemToUpdate.description, translated: value };
-      } else {
-        (itemToUpdate as any)[field] = value;
+  // FIX: Corrected the generic signature for handleNestedItemChange to properly type nested object updates.
+  const handleNestedItemChange = <
+    K extends 'merchant' | 'location'
+  >(
+    itemIndex: number,
+    parentField: K,
+    field: keyof NonNullable<ExtractedReceiptData[K]>,
+    value: any
+  ) => {
+     setQueue(prev => prev.map((item, index) => {
+      if (index === itemIndex && item.data) {
+        const parentObj = item.data[parentField] || {};
+        const newParent = { ...parentObj, [field]: value };
+        const newData = { ...item.data, [parentField]: newParent };
+        return { ...item, data: newData };
       }
-      
-      newItems[index] = itemToUpdate;
-      // Also update total if an item price changes
-      const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-      setReceiptData({ ...receiptData, items: newItems, total: newTotal });
-    }
+      return item;
+    }));
   };
 
-  const handleAddItem = () => {
-    if (receiptData) {
-        const newItem: ReceiptItemData = {
-            description: { original: '', translated: '' },
-            price: 0,
-            category: 'Other'
-        };
-        setReceiptData({ ...receiptData, items: [...receiptData.items, newItem] });
-    }
+  const handleReceiptItemChange = (itemIndex: number, rItemIndex: number, field: keyof ReceiptItemData, value: any) => {
+    setQueue(prev => prev.map((item, index) => {
+      if (index === itemIndex && item.data) {
+        const newItems = [...item.data.items];
+        const itemToUpdate = { ...newItems[rItemIndex] };
+        if (field === 'description') {
+            itemToUpdate.description = { ...itemToUpdate.description, translated: value };
+        } else {
+            (itemToUpdate as any)[field] = value;
+        }
+        newItems[rItemIndex] = itemToUpdate;
+        const newTotal = newItems.reduce((acc, current) => acc + (Number(current.price) || 0), 0);
+        const newData = { ...item.data, items: newItems, total: newTotal };
+        return { ...item, data: newData };
+      }
+      return item;
+    }));
   };
-
-  const handleRemoveItem = (index: number) => {
-    if (receiptData) {
-      const newItems = receiptData.items.filter((_, i) => i !== index);
-      // Also update total
-      const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-      setReceiptData({ ...receiptData, items: newItems, total: newTotal });
-    }
+  
+  const handleRemoveFromQueue = (itemIndex: number) => {
+    setQueue(prev => prev.filter((_, index) => index !== itemIndex));
   };
 
   const handleSubmit = () => {
-    if (receiptData && image) {
-      const finalReceipt: Omit<Receipt, 'id' | 'status'> = {
-        image: image,
-        merchant: receiptData.merchant,
-        date: receiptData.date,
-        location: receiptData.location?.determined || '',
-        total: receiptData.total,
-        currency: receiptData.currency,
-        items: receiptData.items,
-      };
-      onAddReceipt(finalReceipt);
+    const receiptsToSave = queue
+      .filter(item => item.status === 'done' && item.data)
+      .map(item => {
+        const { data, imageDataUrl } = item;
+        const receiptData: Omit<Receipt, 'id' | 'status'> = {
+            merchant: data!.merchant,
+            date: data!.date,
+            location: data!.location?.determined || '',
+            total: data!.total,
+            currency: data!.currency,
+            items: data!.items,
+        };
+        return { receiptData, imageBase64: imageDataUrl };
+      });
+
+    if (receiptsToSave.length > 0) {
+      onAddReceipts(receiptsToSave);
+    } else {
+      onClose(); // Close if nothing to save
     }
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const doneCount = queue.filter(item => item.status === 'done').length;
+  const processingCount = queue.filter(item => item.status === 'processing').length;
+  const isAnythingProcessing = processingCount > 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
-        }
-      `}</style>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <style>{`@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } } .animate-fade-in { animation: fade-in 0.2s; }`}</style>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add New Receipt</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add New Receipt(s)</h2>
           <button onClick={onClose} className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><XIcon className="w-6 h-6"/></button>
         </div>
 
         <div className="p-6 overflow-y-auto">
-          {!receiptData && (
+          {queue.length === 0 && (
             <div className="flex flex-col items-center justify-center space-y-4">
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" />
-
+              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelectEvent} className="hidden" multiple />
+              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelectEvent} className="hidden" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-                >
+                <button onClick={() => cameraInputRef.current?.click()} className="flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800">
                   <CameraIcon className="w-10 h-10 mb-2" />
-                  <span className="font-semibold">Take a photo</span>
+                  <span className="font-semibold">Take Photo</span>
                 </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-                >
+                <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800">
                   <PhotoIcon className="w-10 h-10 mb-2" />
-                  <span className="font-semibold">Upload a photo</span>
+                  <span className="font-semibold">Upload Photos</span>
                 </button>
               </div>
-              
-              {isLoading && (
-                <div className="flex flex-col items-center space-y-2 mt-4 text-gray-600 dark:text-gray-300">
-                  <SpinnerIcon className="w-8 h-8"/>
-                  <p>Analyzing receipt... this may take a moment.</p>
-                </div>
-              )}
-              {error && <p className="text-red-500 text-sm mt-4 p-2 bg-red-50 dark:bg-red-900/50 rounded-md">{error}</p>}
+            </div>
+          )}
+          
+          {queue.length > 0 && (
+            <div className="space-y-4">
+                {queue.map((item, index) => (
+                    <div key={index} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                        <div className="flex items-start space-x-4">
+                            <img src={item.imageDataUrl} alt={item.file.name} className="w-20 h-20 object-cover rounded-md flex-shrink-0 bg-gray-200 dark:bg-gray-600" />
+                            <div className="flex-grow">
+                                <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{item.file.name}</p>
+                                {item.status === 'processing' && <div className="flex items-center text-sm text-blue-600 dark:text-blue-400 mt-1"><SpinnerIcon className="w-4 h-4 mr-2" /><span>Processing...</span></div>}
+                                {item.status === 'done' && <div className="flex items-center text-sm text-green-600 dark:text-green-400 mt-1"><CheckCircleIcon className="w-4 h-4 mr-2" /><span>Ready to save</span></div>}
+                                {item.status === 'error' && <p className="text-sm text-red-500 mt-1">{item.error}</p>}
+                            </div>
+                            <button onClick={() => handleRemoveFromQueue(index)} className="p-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400" aria-label="Remove"><TrashIcon className="w-5 h-5"/></button>
+                        </div>
+                        {item.status === 'done' && item.data && (
+                            <details className="mt-4">
+                                <summary className="cursor-pointer text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Review & Edit</summary>
+                                <div className="mt-4 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Merchant</label>
+                                            <input type="text" value={item.data.merchant.translated} onChange={(e) => handleNestedItemChange(index, 'merchant', 'translated', e.target.value)} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Date</label>
+                                            <input type="date" value={item.data.date} max={today} onChange={(e) => handleItemChange(index, 'date', e.target.value)} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                                        </div>
+                                        {/* Simplified editing for batch mode, more can be added */}
+                                    </div>
+                                </div>
+                            </details>
+                        )}
+                    </div>
+                ))}
             </div>
           )}
 
-          {receiptData && (
-            <div className="space-y-4">
-              {image && <img src={image} alt="Receipt preview" className="rounded-md max-h-48 w-full object-contain bg-gray-100 dark:bg-gray-900 p-2" />}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Merchant</label>
-                    <input type="text" value={receiptData.merchant.translated} onChange={(e) => setReceiptData({ ...receiptData, merchant: { ...receiptData.merchant, translated: e.target.value }})} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                    <input type="date" value={receiptData.date} max={today} onChange={(e) => setReceiptData({ ...receiptData, date: e.target.value })} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-                    <input 
-                      type="text" 
-                      value={receiptData.location?.determined || ''} 
-                      onChange={handleLocationChange} 
-                      placeholder="e.g., Tokyo, Japan" 
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
-                    />
-                    {receiptData.location?.suggestions && receiptData.location.suggestions.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">AI is unsure about the country. Did you mean one of these?</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {receiptData.location.suggestions.map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleSuggestionClick(suggestion)}
-                              className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:hover:bg-blue-900 transition"
-                            >
-                              {suggestion}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
-                    <input type="text" value={receiptData.currency} onChange={(e) => setReceiptData({ ...receiptData, currency: e.target.value })} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                  </div>
-                  <div className="">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Total</label>
-                    <input type="number" step="0.01" readOnly value={receiptData.total} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-white cursor-not-allowed" />
-                  </div>
-              </div>
-              <div>
-                <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Items</h3>
-                <div className="space-y-3">
-                  {receiptData.items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-5">
-                        <input type="text" placeholder="Item name" value={item.description.translated} onChange={(e) => handleItemChange(index, 'description', e.target.value)} className="w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                      </div>
-                      <div className="col-span-3">
-                        <input type="number" step="0.01" placeholder="Price" value={item.price} onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} className="w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                      </div>
-                      <div className="col-span-3">
-                        <select value={item.category} onChange={(e) => handleItemChange(index, 'category', e.target.value)} className="w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                      </div>
-                      <div className="col-span-1">
-                        <button onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700"><TrashIcon className="w-5 h-5"/></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={handleAddItem} className="mt-3 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                    <PlusCircleIcon className="w-5 h-5"/>
-                    <span>Add Item</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end space-x-3">
-          <button onClick={onClose} className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm transition">Cancel</button>
-          <button onClick={handleSubmit} disabled={!receiptData || isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed">
-            {isLoading ? 'Saving...' : 'Save Receipt'}
-          </button>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+            <div>
+                {isAnythingProcessing && (
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                        <SpinnerIcon className="w-5 h-5 mr-2" />
+                        Processing...
+                    </div>
+                )}
+            </div>
+            <div className="flex space-x-3">
+              <button onClick={onClose} className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm transition">Cancel</button>
+              <button onClick={handleSubmit} disabled={isAnythingProcessing || doneCount === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed">
+                Save {doneCount > 0 ? `${doneCount} ` : ''}Receipt{doneCount > 1 || doneCount === 0 ? 's' : ''}
+              </button>
+            </div>
         </div>
       </div>
     </div>

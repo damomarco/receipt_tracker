@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Receipt, ReceiptItemData } from '../types';
 import { useReceipts } from '../contexts/ReceiptsContext';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, PlusCircleIcon, MapPinIcon } from './icons';
 import { ImageModal } from './ImageModal';
 import { getCategoryColorName, getCategoryDisplayClasses } from '../utils/colors';
+import { getImage } from '../services/imageStore';
+
 
 interface ReceiptItemProps {
   receipt: Receipt;
@@ -24,7 +27,22 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   
+  useEffect(() => {
+    let isMounted = true;
+    getImage(receipt.id).then(url => {
+        if (isMounted && url) {
+            setImageUrl(url);
+        }
+    }).catch(err => {
+        console.error("Failed to load image from IndexedDB", err);
+    });
+
+    return () => { isMounted = false; };
+  }, [receipt.id]);
+
+
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete the receipt from ${receipt.merchant.translated}?`)) {
       deleteReceipt(receipt.id);
@@ -80,7 +98,6 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
       setEditedReceipt(prev => ({ ...prev, items: newItems, total: newTotal }));
   };
 
-  // FIX: The `Date` constructor must be capitalized.
   const today = new Date().toISOString().split('T')[0];
 
   if (isEditing) {
@@ -150,8 +167,14 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-4">
-            <button onClick={() => setIsImageModalOpen(true)} className="flex-shrink-0">
-              <img src={receipt.image} alt={`Receipt from ${receipt.merchant.translated}`} className="w-20 h-20 object-cover rounded-md bg-gray-100 dark:bg-gray-700 cursor-pointer" />
+            <button onClick={() => imageUrl && setIsImageModalOpen(true)} className="flex-shrink-0 w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-md" disabled={!imageUrl}>
+              {imageUrl ? (
+                <img src={imageUrl} alt={`Receipt from ${receipt.merchant.translated}`} className="w-full h-full object-cover rounded-md cursor-pointer" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                    <SpinnerIcon className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
             </button>
             <div className="flex-grow">
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{receipt.merchant.translated}</h3>
@@ -201,7 +224,7 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
             </div>
         </div>
       </div>
-      {isImageModalOpen && <ImageModal imageSrc={receipt.image} onClose={() => setIsImageModalOpen(false)} />}
+      {isImageModalOpen && imageUrl && <ImageModal imageSrc={imageUrl} onClose={() => setIsImageModalOpen(false)} />}
     </>
   );
 };
