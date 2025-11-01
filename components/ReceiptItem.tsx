@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Receipt, Category, CATEGORIES } from '../types';
+import { Receipt, Category, CATEGORIES, ReceiptItemData } from '../types';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, ChevronDownIcon, PlusCircleIcon } from './icons';
 import { ImageModal } from './ImageModal';
 
@@ -9,7 +9,7 @@ interface ReceiptItemProps {
   onUpdate: (receipt: Receipt) => void;
 }
 
-const categoryColorMap: Record<Category, string> = {
+export const categoryColorMap: Record<Category, string> = {
   'Food & Drink': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
   'Groceries': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
   'Transportation': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
@@ -50,28 +50,32 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
     }
   };
 
-  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price', value: string) => {
+  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price' | 'category', value: string) => {
     const newItems = [...editedReceipt.items];
     const itemToUpdate = { ...newItems[index] };
 
     if (field === 'price') {
       itemToUpdate.price = parseFloat(value) || 0;
+    } else if (field === 'category') {
+        itemToUpdate.category = value as Category;
     } else {
       itemToUpdate.description = { ...itemToUpdate.description, [field]: value };
     }
     
     newItems[index] = itemToUpdate;
-    setEditedReceipt(prev => ({ ...prev, items: newItems }));
+    const newTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+    setEditedReceipt(prev => ({ ...prev, items: newItems, total: newTotal }));
   };
 
   const handleAddItem = () => {
-    const newItem = { description: { original: '', translated: '' }, price: 0 };
+    const newItem: ReceiptItemData = { description: { original: '', translated: '' }, price: 0, category: 'Other' };
     setEditedReceipt(prev => ({ ...prev, items: [...(prev.items || []), newItem] }));
   }
 
   const handleRemoveItem = (index: number) => {
     const newItems = editedReceipt.items.filter((_, i) => i !== index);
-    setEditedReceipt(prev => ({ ...prev, items: newItems }));
+    const newTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+    setEditedReceipt(prev => ({ ...prev, items: newItems, total: newTotal }));
   }
 
   const handleSave = () => {
@@ -83,6 +87,9 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
     setEditedReceipt(receipt);
     setIsEditing(false);
   }
+
+  // FIX: Explicitly type `uniqueCategories` as `Category[]` to prevent `category` from being inferred as `unknown`.
+  const uniqueCategories: Category[] = Array.from(new Set(receipt.items?.map(item => item.category).filter(Boolean) || []));
 
   return (
     <>
@@ -121,9 +128,6 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                   <input type="text" name="merchant.translated" value={editedReceipt.merchant.translated} onChange={handleEditChange} className="w-full p-1 border rounded text-lg font-semibold bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Merchant (EN)"/>
                   <input type="text" name="merchant.original" value={editedReceipt.merchant.original} onChange={handleEditChange} className="w-full p-1 border rounded text-sm bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400" placeholder="Merchant (JP)"/>
                   <input type="date" name="date" value={editedReceipt.date} onChange={handleEditChange} className="w-full p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"/>
-                  <select name="category" value={editedReceipt.category} onChange={handleEditChange} className="w-full p-1.5 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
-                      {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
                   <div className="flex space-x-2">
                       <input type="number" name="total" value={editedReceipt.total} onChange={handleEditChange} className="w-1/2 p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Total"/>
                       <input type="text" name="currency" value={editedReceipt.currency} onChange={handleEditChange} className="w-1/2 p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white" placeholder="Currency"/>
@@ -134,14 +138,19 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                       {(editedReceipt.items || []).map((item, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-5">
+                          <div className="col-span-4">
                             <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
+                          </div>
+                          <div className="col-span-3">
+                            <select value={item.category} onChange={(e) => handleItemChange(index, 'category', e.target.value)} className="w-full text-sm p-1 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
                           </div>
                           <div className="col-span-1">
                             <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>
@@ -161,9 +170,13 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                       <div>
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{receipt.merchant.translated}</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mb-2">{receipt.merchant.original}</p>
-                        <span className={`text-xs font-semibold mr-2 px-2.5 py-1 rounded-full ${categoryColorMap[receipt.category] || categoryColorMap['Other']}`}>
-                          {receipt.category}
-                        </span>
+                        <div className="flex flex-wrap gap-2">
+                        {uniqueCategories.map(category => (
+                          <span key={category} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${categoryColorMap[category] || categoryColorMap['Other']}`}>
+                            {category}
+                          </span>
+                        ))}
+                        </div>
                       </div>
                       <StatusIndicator status={receipt.status} />
                   </div>
@@ -179,8 +192,11 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                       {isItemsVisible && (
                         <ul className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-600 space-y-1 text-sm">
                           {receipt.items.map((item, index) => (
-                            <li key={index} className="flex justify-between">
-                              <span className="text-gray-700 dark:text-gray-300 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
+                            <li key={index} className="flex justify-between items-center">
+                              <div className="flex items-center">
+                                <span className="text-gray-700 dark:text-gray-300 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
+                                <span className={`text-xs font-medium ml-2 px-2 py-0.5 rounded-full ${categoryColorMap[item.category] || categoryColorMap['Other']}`}>{item.category}</span>
+                              </div>
                               <span className="text-gray-800 dark:text-gray-100 font-medium flex-shrink-0">
                                 {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
                               </span>

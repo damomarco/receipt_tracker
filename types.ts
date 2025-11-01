@@ -19,6 +19,7 @@ export interface ReceiptItemData {
     translated: string;
   };
   price: number;
+  category: Category;
 }
 
 export interface Receipt {
@@ -32,7 +33,6 @@ export interface Receipt {
   total: number;
   currency: string;
   items: ReceiptItemData[];
-  category: Category;
   status: 'pending' | 'syncing' | 'synced';
 }
 
@@ -45,5 +45,4 @@ export interface ExtractedReceiptData {
   total: number;
   currency: string;
   items: ReceiptItemData[];
-  category: Category;
 }

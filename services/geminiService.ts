@@ -41,11 +41,6 @@ const receiptSchema = {
       type: Type.STRING,
       description: "The currency of the transaction (e.g., JPY, USD). Use the currency symbol or code from the receipt.",
     },
-    category: {
-        type: Type.STRING,
-        description: `Categorize the expense based on the merchant and items. Choose one of the following categories: ${CATEGORIES.join(', ')}. If unsure, use 'Other'.`,
-        enum: CATEGORIES,
-    },
     items: {
       type: Type.ARRAY,
       description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
@@ -70,12 +65,17 @@ const receiptSchema = {
             type: Type.NUMBER,
             description: "The price of the individual item.",
           },
+          category: {
+            type: Type.STRING,
+            description: `Categorize the item. Choose one of the following categories: ${CATEGORIES.join(', ')}. If unsure, use 'Other'.`,
+            enum: CATEGORIES,
+          },
         },
-        required: ['description', 'price'],
+        required: ['description', 'price', 'category'],
       }
     }
   },
-  required: ['merchant', 'date', 'total', 'currency', 'items', 'category'],
+  required: ['merchant', 'date', 'total', 'currency', 'items'],
 };
 
 export const processReceiptImage = async (base64Image: string): Promise<ExtractedReceiptData> => {
@@ -87,7 +87,7 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
   };
 
   const textPart = {
-    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, an appropriate expense category, and a list of all purchased items with their prices. Translate the merchant name and all item descriptions to English. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
+    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. For each item, translate its description to English and assign it an appropriate expense category. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
   };
 
   try {
@@ -104,8 +104,9 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
     const parsedData: ExtractedReceiptData = JSON.parse(jsonText);
 
     // Basic validation
-    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency || !Array.isArray(parsedData.items) || !parsedData.category) {
-      throw new Error("Extracted data is missing required fields.");
+    const itemsAreValid = parsedData.items.every(item => item.description && typeof item.price === 'number' && item.category);
+    if (!parsedData.merchant || !parsedData.date || typeof parsedData.total !== 'number' || !parsedData.currency || !Array.isArray(parsedData.items) || !itemsAreValid) {
+        throw new Error("Extracted data is missing required fields or items are malformed.");
     }
     
     // If Gemini fails itemization but gets a total, create a fallback item to prevent errors.
@@ -115,7 +116,8 @@ export const processReceiptImage = async (base64Image: string): Promise<Extracte
                 original: '不明',
                 translated: 'Uncategorized Item'
             },
-            price: parsedData.total
+            price: parsedData.total,
+            category: 'Other'
         });
     }
 
@@ -132,10 +134,13 @@ export const askAboutAllReceipts = async (receipts: Receipt[], prompt: string): 
     return "You haven't added any receipts yet. Please add some receipts to start asking questions.";
   }
 
-  const contextPrompt = `You are a helpful assistant for managing travel expenses. Based on the following JSON data, which represents a list of receipts, please answer the user's question. Provide concise and helpful answers. Do not mention the JSON structure in your answer.
+  // Sanitize receipts for the prompt to remove the base64 image data
+  const sanitizedReceipts = receipts.map(({ image, ...rest }) => rest);
+
+  const contextPrompt = `You are a helpful assistant for managing travel expenses. Based on the following JSON data, which represents a list of receipts, please answer the user's question. The 'items' array in each receipt contains individual products with their own categories. Provide concise and helpful answers. Do not mention the JSON structure in your answer.
 
 Here is the receipt data:
-${JSON.stringify(receipts, null, 2)}
+${JSON.stringify(sanitizedReceipts, null, 2)}
 
 User's question: "${prompt}"`;
 

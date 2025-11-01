@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { processReceiptImage } from '../services/geminiService';
-import { Receipt, ExtractedReceiptData, CATEGORIES } from '../types';
+import { Receipt, ExtractedReceiptData, CATEGORIES, Category } from '../types';
 import { CameraIcon, SpinnerIcon, XIcon, PhotoIcon, ReceiptIcon, PlusCircleIcon, TrashIcon } from './icons';
 
 interface AddReceiptModalProps {
@@ -67,7 +67,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }
   };
 
-  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price', value: string) => {
+  const handleItemChange = (index: number, field: 'translated' | 'original' | 'price' | 'category', value: string) => {
     if (!extractedData) return;
 
     const newItems = [...extractedData.items];
@@ -75,25 +75,30 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
 
     if (field === 'price') {
       itemToUpdate.price = parseFloat(value) || 0;
+    } else if (field === 'category') {
+        itemToUpdate.category = value as Category;
     } else {
       itemToUpdate.description = { ...itemToUpdate.description, [field]: value };
     }
     
     newItems[index] = itemToUpdate;
 
-    setExtractedData(prev => prev ? { ...prev, items: newItems } : null);
+    const newTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+
+    setExtractedData(prev => prev ? { ...prev, items: newItems, total: newTotal } : null);
   };
 
   const handleAddItem = () => {
     if (!extractedData) return;
-    const newItem = { description: { original: '', translated: '' }, price: 0 };
+    const newItem = { description: { original: '', translated: '' }, price: 0, category: 'Other' as Category };
     setExtractedData(prev => prev ? { ...prev, items: [...(prev.items || []), newItem] } : null);
   }
 
   const handleRemoveItem = (index: number) => {
     if (!extractedData) return;
     const newItems = extractedData.items.filter((_, i) => i !== index);
-    setExtractedData(prev => prev ? { ...prev, items: newItems } : null);
+    const newTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+    setExtractedData(prev => prev ? { ...prev, items: newItems, total: newTotal } : null);
   }
   
   const triggerCameraInput = () => {
@@ -174,12 +179,6 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                       <input type="date" name="date" value={extractedData.date} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                        <select name="category" value={extractedData.category} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                      </div>
                        <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Total Amount</label>
                         <input type="number" name="total" value={extractedData.total} onChange={handleDataChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
@@ -196,14 +195,19 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                     <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
                       {extractedData.items.map((item, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-5">
+                          <div className="col-span-4">
                             <input type="text" value={item.description.translated} onChange={(e) => handleItemChange(index, 'translated', e.target.value)} placeholder="Item (EN)" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <input type="text" value={item.description.original} onChange={(e) => handleItemChange(index, 'original', e.target.value)} placeholder="Item (JP)" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
                           </div>
-                          <div className="col-span-3">
+                           <div className="col-span-2">
                             <input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} placeholder="Price" className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
+                          </div>
+                           <div className="col-span-3">
+                            <select value={item.category} onChange={(e) => handleItemChange(index, 'category', e.target.value)} className="w-full text-sm p-1 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
                           </div>
                           <div className="col-span-1 flex justify-end">
                             <button onClick={() => handleRemoveItem(index)} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" aria-label="Remove item"><TrashIcon className="w-5 h-5"/></button>

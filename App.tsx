@@ -16,13 +16,21 @@ function App() {
   const isOnline = useOnlineStatus();
 
   useEffect(() => {
-    // One-time data migration for categories
+    // One-time data migration for item-level categories
     setReceipts(prevReceipts => {
         let hasChanged = false;
         const migratedReceipts = prevReceipts.map(r => {
-            if (!(r as any).category) {
+            // Check if the receipt has the old structure (top-level category)
+            // and items that don't have categories yet.
+            if ((r as any).category && r.items && r.items.every(item => !(item as any).category)) {
                 hasChanged = true;
-                return { ...r, category: 'Other' };
+                const newItems = r.items.map(item => ({
+                    ...item,
+                    category: (r as any).category, // Assign parent category to each item
+                }));
+                const newReceipt = { ...r, items: newItems };
+                delete (newReceipt as any).category; // Remove old top-level category
+                return newReceipt;
             }
             return r;
         });
