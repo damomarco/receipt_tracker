@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { processReceiptImage } from '../services/geminiService';
-import { ExtractedReceiptData, ReceiptItemData } from '../types';
+import { ExtractedReceiptData, ReceiptItemData, Receipt } from '../types';
 import { PhotoIcon, XIcon, SpinnerIcon, TrashIcon, PlusCircleIcon, CameraIcon } from './icons';
 
 interface AddReceiptModalProps {
   onClose: () => void;
-  onAddReceipt: (receipt: Omit<ExtractedReceiptData, 'status' | 'id'>) => void;
+  onAddReceipt: (receipt: Omit<Receipt, 'id' | 'status'>) => void;
   allCategories: string[];
 }
 
@@ -14,8 +14,30 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<ExtractedReceiptData | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Attempt to get the user's location when the modal is opened.
+    // This will be used as a hint for the AI.
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          // User likely denied permission or an error occurred.
+          // Proceed gracefully without location data.
+          console.warn(`Could not get geolocation: ${error.message}`);
+          setUserLocation(null);
+        }
+      );
+    }
+  }, []); // Run only once when the modal mounts
 
   const handleImageChange = async (file: File) => {
     if (!file) return;
@@ -30,7 +52,8 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
         const base64Image = (reader.result as string).split(',')[1];
         setImage(reader.result as string);
         try {
-          const data = await processReceiptImage(base64Image, allCategories);
+          // Pass the user's location to the processing service
+          const data = await processReceiptImage(base64Image, allCategories, userLocation);
           setReceiptData(data);
         } catch (e: any) {
           setError(e.message || "Failed to process the receipt.");
@@ -56,9 +79,36 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }
   };
 
-  const handleFormChange = <T extends keyof ExtractedReceiptData>(field: T, value: ExtractedReceiptData[T]) => {
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (receiptData) {
-      setReceiptData({ ...receiptData, [field]: value });
+      setReceiptData({
+        ...receiptData,
+        location: {
+          determined: e.target.value,
+          suggestions: receiptData.location?.suggestions || [],
+        }
+      });
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    if (receiptData && receiptData.location) {
+      const currentDetermined = receiptData.location.determined.toLowerCase();
+      const suggestionsLower = receiptData.location.suggestions.map(s => s.toLowerCase());
+
+      let newLocationValue = suggestion;
+      // If the current determined value doesn't seem to be one of the countries, prepend it.
+      if (currentDetermined && !suggestionsLower.some(s => currentDetermined.includes(s))) {
+        newLocationValue = `${receiptData.location.determined}, ${suggestion}`;
+      }
+
+      setReceiptData({
+        ...receiptData,
+        location: {
+          ...receiptData.location,
+          determined: newLocationValue,
+        },
+      });
     }
   };
   
@@ -101,8 +151,17 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
   };
 
   const handleSubmit = () => {
-    if (receiptData) {
-      onAddReceipt(receiptData);
+    if (receiptData && image) {
+      const finalReceipt: Omit<Receipt, 'id' | 'status'> = {
+        image: image,
+        merchant: receiptData.merchant,
+        date: receiptData.date,
+        location: receiptData.location?.determined || '',
+        total: receiptData.total,
+        currency: receiptData.currency,
+        items: receiptData.items,
+      };
+      onAddReceipt(finalReceipt);
     }
   };
 
@@ -164,21 +223,43 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Merchant</label>
-                    <input type="text" value={receiptData.merchant.translated} onChange={(e) => handleFormChange('merchant', { ...receiptData.merchant, translated: e.target.value })} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <input type="text" value={receiptData.merchant.translated} onChange={(e) => setReceiptData({ ...receiptData, merchant: { ...receiptData.merchant, translated: e.target.value }})} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                    <input type="date" value={receiptData.date} max={today} onChange={(e) => handleFormChange('date', e.target.value)} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <input type="date" value={receiptData.date} max={today} onChange={(e) => setReceiptData({ ...receiptData, date: e.target.value })} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-                    <input type="text" value={receiptData.location || ''} onChange={(e) => handleFormChange('location', e.target.value)} placeholder="e.g., Tokyo, Japan" className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <input 
+                      type="text" 
+                      value={receiptData.location?.determined || ''} 
+                      onChange={handleLocationChange} 
+                      placeholder="e.g., Tokyo, Japan" 
+                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
+                    />
+                    {receiptData.location?.suggestions && receiptData.location.suggestions.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">AI is unsure about the country. Did you mean one of these?</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {receiptData.location.suggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:hover:bg-blue-900 transition"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
-                    <input type="text" value={receiptData.currency} onChange={(e) => handleFormChange('currency', e.target.value)} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <input type="text" value={receiptData.currency} onChange={(e) => setReceiptData({ ...receiptData, currency: e.target.value })} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Total</label>
                     <input type="number" step="0.01" readOnly value={receiptData.total} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-white cursor-not-allowed" />
                   </div>

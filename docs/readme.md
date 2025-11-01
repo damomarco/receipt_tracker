@@ -1,12 +1,13 @@
 # Travel Receipt Manager
 
-A Progressive Web App (PWA) to capture, process, and organize cash receipt photos for school trips to Japan using AI-powered OCR and translation. It simplifies expense tracking with offline capabilities.
+A Progressive Web App (PWA) to capture, process, and organize cash receipt photos for your travels using AI-powered OCR and translation. It simplifies expense tracking with offline capabilities.
 
 ## Key Features
 
 - **AI-Powered Receipt Scanning**: Utilizes the Google Gemini API to automatically extract merchant names, dates, and total amounts from receipt photos.
 - **AI-Powered Itemization & Categorization**: Automatically extracts and categorizes individual line items from the receipt, providing a granular breakdown of expenses.
-- **Bilingual Support**: Translates Japanese merchant names and item descriptions into English for clarity.
+- **AI-Powered Location Detection**: The AI automatically identifies the city and country from the receipt's text, enhanced with optional GPS data for greater accuracy. If the AI is uncertain about the country, it will provide a list of suggestions.
+- **Bilingual Support**: Translates merchant names and item descriptions from their original language into English for clarity.
 - **Global AI Chat**: Ask questions about your entire collection of receipts. Get instant answers for things like total spending, most expensive items, or expenses by category.
 - **Custom Category Management**: Add, edit, and delete your own expense categories for personalized tracking.
 - **Advanced Spending Summary**: Visualize your spending with a consolidated, segmented bar chart that shows the percentage breakdown by category for each currency.
@@ -29,9 +30,9 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 ## How to Use
 
 1.  **Add a Receipt**: Click the large `+` button at the bottom right of the screen.
-2.  **Capture or Upload**: Take a photo of your receipt or upload an existing image.
-3.  **Automatic Processing**: The app will automatically send the image to the Gemini API to extract the relevant details, including an itemized list with a suggested category for each item.
-4.  **Review and Save**: The extracted data will appear in editable fields. Review the information, edit line items and their categories as needed, and click "Save Receipt".
+2.  **Capture or Upload**: Take a photo of your receipt or upload an existing image. Your browser may ask for location access to improve accuracy.
+3.  **Automatic Processing**: The app will automatically send the image to the Gemini API to extract the relevant details. If the location is ambiguous, the AI will provide clickable suggestions.
+4.  **Review and Save**: The extracted data will appear in editable fields. Review the information, correct the location if needed, and click "Save Receipt".
 5.  **Analyze Your Spending**: View the "Spending Summary" at the top of the main screen to see a percentage-based breakdown of your expenses by category.
 6.  **Ask Questions About All Receipts**: Tap the chat bubble icon on the main screen to open the global chat. Ask questions like "How much did I spend in total?" or "List all my food expenses."
 7.  **Manage Receipts**: View all your receipts on the main screen, grouped by date. Use the "Show items" toggle to see the itemized list for a specific receipt.

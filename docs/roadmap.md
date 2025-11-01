@@ -6,6 +6,10 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Recently Completed
 
+-   **AI Location Detection**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: The AI now analyzes the receipt to automatically identify and extract the location (city, country). This is now enhanced by using the device's GPS location (with user permission) as a hint to the AI, significantly improving accuracy for receipts in globally spoken languages.
+
 -   **Custom Categories**:
     -   **Status**: ✅ **Done**
     -   **Description**: Implemented a settings modal allowing users to add, edit, and delete their own custom expense categories. These categories are now used by the Gemini AI and throughout the app's UI.

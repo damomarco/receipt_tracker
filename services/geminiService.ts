@@ -12,7 +12,7 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const model = 'gemini-2.5-flash';
 
-export const processReceiptImage = async (base64Image: string, allCategories: string[]): Promise<ExtractedReceiptData> => {
+export const processReceiptImage = async (base64Image: string, allCategories: string[], location: { latitude: number; longitude: number } | null): Promise<ExtractedReceiptData> => {
   const receiptSchema = {
     type: Type.OBJECT,
     properties: {
@@ -21,7 +21,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
         properties: {
           original: {
             type: Type.STRING,
-            description: "The original merchant name as it appears on the receipt, in Japanese.",
+            description: "The original merchant name as it appears on the receipt, in its original language.",
           },
           translated: {
             type: Type.STRING,
@@ -32,11 +32,24 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
       },
       date: {
         type: Type.STRING,
-        description: "The date of the transaction in YYYY-MM-DD format. Handle Japanese date formats like 令和 (Reiwa).",
+        description: "The date of the transaction in YYYY-MM-DD format. Handle various international date formats.",
       },
       location: {
-        type: Type.STRING,
-        description: "The city or country where the transaction took place, if identifiable from the receipt. e.g., 'Tokyo, Japan'. If it cannot be determined, leave this field empty.",
+        type: Type.OBJECT,
+        description: "The location of the transaction. If you are certain, provide the city and country in the 'determined' field and leave 'suggestions' empty. If you are uncertain about the country (e.g., for a receipt in Spanish), provide the city in 'determined' and list possible countries in 'suggestions'. If no location can be found, leave both fields empty.",
+        properties: {
+          determined: {
+            type: Type.STRING,
+            description: "The AI's best guess for the location, e.g., 'Tokyo, Japan' or just 'Barcelona'.",
+          },
+          suggestions: {
+            type: Type.ARRAY,
+            description: "A list of possible countries if the AI is uncertain.",
+            items: {
+              type: Type.STRING,
+            },
+          },
+        },
       },
       total: {
         type: Type.NUMBER,
@@ -48,7 +61,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
       },
       items: {
         type: Type.ARRAY,
-        description: "A list of all items purchased. This MUST include not only products, but also any taxes (like 消費税), service charges, discounts, or other fees that contribute to the final total. Each should be a separate item in the array. Translate Japanese item descriptions to English.",
+        description: "A list of all items purchased. This MUST include not only products, but also any taxes, service charges, discounts, or other fees that contribute to the final total. Each should be a separate item in the array. Translate item descriptions from their original language to English.",
         items: {
           type: Type.OBJECT,
           properties: {
@@ -57,7 +70,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
               properties: {
                 original: {
                   type: Type.STRING,
-                  description: "The original item name as it appears on the receipt, in Japanese.",
+                  description: "The original item name as it appears on the receipt, in its original language.",
                 },
                 translated: {
                   type: Type.STRING,
@@ -90,9 +103,13 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
     },
   };
 
-  const textPart = {
-    text: `Analyze this receipt. First, try to identify the location (city, country) from the receipt's text. Then extract all other details: merchant name, date (in YYYY-MM-DD format), total, currency, and a detailed list of items. This list MUST include products, taxes (like 消費税), service charges, and any other fees to ensure the sum of item prices equals the final total. Translate Japanese text to English. Assign an expense category for each item from the provided list. If you cannot determine a location, leave the location field empty.`,
-  };
+  let promptText = `Analyze this receipt. Extract all details. For the location, if you are certain, provide the city/country in the 'determined' field. If you are uncertain about the country (e.g., because the language is spoken in many places), put your best guess for the city in 'determined' and list possible countries in 'suggestions'. Then, extract merchant name, date (YYYY-MM-DD), total, currency, and a detailed list of items. This list MUST include products, taxes, etc., to ensure the sum of item prices equals the final total. Translate text to English and categorize each item.`;
+
+  if (location) {
+      promptText = `Analyze this receipt. User's GPS is at Lat ${location.latitude}, Lng ${location.longitude}. Use this as a strong hint, but verify with the text to determine the final location. For the location, if you are certain, provide city/country in the 'determined' field. If uncertain about the country, put your best guess for the city in 'determined' and list possible countries in 'suggestions'. Then, extract merchant name, date (YYYY-MM-DD), total, currency, and a detailed list of items. This list MUST include all fees to ensure the sum of prices equals the total. Translate to English and categorize each item.`;
+  }
+
+  const textPart = { text: promptText };
 
   try {
     const response = await ai.models.generateContent({

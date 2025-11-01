@@ -45,7 +45,10 @@ export interface ExtractedReceiptData {
     translated: string;
   };
   date: string; // Should be in YYYY-MM-DD format
-  location?: string; // e.g., "Tokyo, Japan"
+  location?: {
+    determined: string; // The AI's best guess for the location.
+    suggestions: string[]; // A list of possible countries if the AI is uncertain.
+  };
   total: number;
   currency: string;
   items: ReceiptItemData[];

@@ -29,7 +29,7 @@ The application is a client-side, single-page application (SPA) built with **Rea
     -   `Header.tsx`: Displays the application title, sync status, and a settings menu for managing categories and themes.
     -   `ReceiptList.tsx`: Consumes data from `ReceiptsContext`. Renders receipts in collapsible sections grouped by date.
     -   `ReceiptItem.tsx`: Consumes data and functions from `ReceiptsContext`. Manages its `isEditing` state, allowing users to edit receipt details.
-    -   `AddReceiptModal.tsx`: A complex modal for adding new receipts. It communicates with `geminiService` and allows the user to review/edit the AI-extracted data.
+    -   `AddReceiptModal.tsx`: A complex modal for adding new receipts. It requests GPS location and communicates with `geminiService`. It allows users to review/edit the AI-extracted data and displays clickable suggestions if the AI is uncertain about the location.
     -   `GlobalChatModal.tsx`: Consumes `receipts` data from `ReceiptsContext` for interacting with the Gemini API about the entire receipt collection.
     -   `ManageCategoriesModal.tsx`: Provides the UI for users to add, edit, and delete their custom expense categories.
     -   `SpendingSummary.tsx`: Consumes data from `ReceiptsContext`. Displays high-level statistics and contains the `CategorySpendingChart`.
@@ -49,18 +49,20 @@ State management has been refactored to use **React Context API** to avoid "prop
 
 ## Services & Utilities
 
--   **`services/geminiService.ts`**: An abstraction layer for all communication with the Google Gemini API. It now accepts a dynamic list of all categories to improve the AI's categorization suggestions.
+-   **`services/geminiService.ts`**: An abstraction layer for all communication with the Google Gemini API. It accepts a dynamic list of categories to improve AI suggestions and can use optional GPS coordinates. It returns a structured location object that includes a list of possible countries if the AI is uncertain, enhancing the user's ability to correct data.
 -   **`utils/colors.ts`**: A utility module that dynamically generates consistent, unique colors for custom categories using a simple hashing function, enhancing the UI's visual clarity.
 
 ## Data Flow & Migration
 
 ### Adding a Receipt
 
-1.  User uploads an image in the `AddReceiptModal`.
-2.  The modal calls `geminiService.processReceiptImage`, passing along the list of all default and custom categories to the AI.
-3.  The service returns structured JSON where each item has its own AI-suggested category.
-4.  On save, the `addReceipt` function in `App.tsx` is called.
-5.  `App.tsx` updates its state, which is automatically propagated through the `ReceiptsContext` to all consuming components, triggering a re-render.
+1.  User opens the `AddReceiptModal`, which triggers a browser request for geolocation.
+2.  User uploads an image.
+3.  The modal calls `geminiService.processReceiptImage`, passing the image, all categories, and the (optional) GPS coordinates.
+4.  The service returns structured JSON. If the location is ambiguous, it includes a `determined` location and a list of `suggestions`.
+5.  The `AddReceiptModal` displays the extracted data and any location suggestions as clickable buttons.
+6.  On save, the `addReceipt` function in `App.tsx` is called with the final, user-verified data.
+7.  `App.tsx` updates its state, which is automatically propagated through the `ReceiptsContext` to all consuming components, triggering a re-render.
 
 ### Data Migration
 
