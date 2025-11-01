@@ -47,6 +47,28 @@ State management has been refactored to use **React Context API** to avoid "prop
 -   **`useOnlineStatus`**: A custom hook that provides a boolean flag indicating the network status, used to manage receipt syncing.
 -   **Component State (`useState`)**: Used for local UI concerns, such as modal visibility and edit modes.
 
+## Offline-First Strategy
+
+The application is designed to be fully functional without an internet connection, ensuring a reliable user experience in various travel scenarios. This is achieved through a combination of browser technologies and application-level state management.
+
+-   **Data Persistence**: `localStorage` is the primary mechanism for data storage. The `useLocalStorage` custom hook provides a reactive interface to read and write the `receipts` and `customCategories` arrays, ensuring all data is saved locally on the user's device.
+-   **Network Awareness**: The `useOnlineStatus` hook listens to the browser's `online` and `offline` events, providing a simple boolean flag that the application uses to alter its behavior.
+-   **Status Tracking**: Each receipt object has a `status` property that can be one of three states:
+    -   `'pending'`: The receipt was created while the user was offline and has not yet been synced.
+    -   `'syncing'`: The application has come back online and is in the process of "uploading" pending receipts. In this demo app, this is a simulated delay.
+    -   `'synced'`: The receipt was created while online or has been successfully synced from a pending state.
+
+### Offline Data Flow
+
+1.  A user opens the app and adds a new receipt while offline.
+2.  The `useOnlineStatus` hook reports `isOnline: false`.
+3.  When the `addReceipt` function in `App.tsx` is called, it creates the new receipt object with `status: 'pending'`.
+4.  The receipt is saved to `localStorage` and immediately appears in the UI, tagged with a "Pending sync" status.
+5.  When the user's device reconnects to the internet, the `useOnlineStatus` hook updates to `isOnline: true`.
+6.  A `useEffect` hook in `App.tsx`, which listens for changes to `isOnline`, triggers the sync process.
+7.  It filters for all receipts with `status: 'pending'`, updates their status to `'syncing'`, and saves this change.
+8.  After a simulated delay (to mimic a network request), the status is updated again to `'synced'`, completing the cycle. The UI updates accordingly to show the "Synced" status.
+
 ## Services & Utilities
 
 -   **`services/geminiService.ts`**: An abstraction layer for all communication with the Google Gemini API. It accepts a dynamic list of categories to improve AI suggestions and can use optional GPS coordinates. It returns a structured location object that includes a list of possible countries if the AI is uncertain, enhancing the user's ability to correct data.
