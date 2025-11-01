@@ -9,6 +9,7 @@ import { Receipt, DEFAULT_CATEGORIES } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
 import { SpendingSummary } from './components/SpendingSummary';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
+import { ReceiptsProvider } from './contexts/ReceiptsContext';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,61 +124,69 @@ function App() {
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
 
+  const receiptsContextValue = {
+    receipts,
+    deleteReceipt,
+    updateReceipt,
+    allCategories,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <Header 
-        isOnline={isOnline} 
-        pendingCount={pendingCount} 
-        syncingCount={syncingCount}
-        onManageCategories={() => setIsCategoriesModalOpen(true)}
-      />
-      <main className="flex-grow container mx-auto p-4 md:p-6">
-        <SpendingSummary receipts={receipts} />
-        <ReceiptList receipts={receipts} onDelete={deleteReceipt} onUpdate={updateReceipt} allCategories={allCategories} />
-      </main>
-      
-      <button
-        onClick={() => setIsChatModalOpen(true)}
-        className="fixed bottom-6 left-6 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 z-50"
-        aria-label="Ask about all receipts"
-      >
-        <ChatBubbleIcon className="w-8 h-8" />
-      </button>
-
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 z-50"
-        aria-label="Add new receipt"
-      >
-        <PlusIcon className="w-8 h-8" />
-      </button>
-
-      {isModalOpen && (
-        <AddReceiptModal
-          onClose={() => setIsModalOpen(false)}
-          onAddReceipt={addReceipt}
-          allCategories={allCategories}
+    <ReceiptsProvider value={receiptsContextValue}>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+        <Header 
+          isOnline={isOnline} 
+          pendingCount={pendingCount} 
+          syncingCount={syncingCount}
+          onManageCategories={() => setIsCategoriesModalOpen(true)}
         />
-      )}
+        <main className="flex-grow container mx-auto p-4 md:p-6">
+          <SpendingSummary />
+          <ReceiptList />
+        </main>
+        
+        <button
+          onClick={() => setIsChatModalOpen(true)}
+          className="fixed bottom-6 left-6 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 z-50"
+          aria-label="Ask about all receipts"
+        >
+          <ChatBubbleIcon className="w-8 h-8" />
+        </button>
 
-      {isChatModalOpen && (
-        <GlobalChatModal
-          receipts={receipts}
-          onClose={() => setIsChatModalOpen(false)}
-        />
-      )}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 z-50"
+          aria-label="Add new receipt"
+        >
+          <PlusIcon className="w-8 h-8" />
+        </button>
 
-      {isCategoriesModalOpen && (
-        <ManageCategoriesModal
-          onClose={() => setIsCategoriesModalOpen(false)}
-          defaultCategories={DEFAULT_CATEGORIES}
-          customCategories={customCategories}
-          onAddCategory={addCustomCategory}
-          onUpdateCategory={updateCustomCategory}
-          onDeleteCategory={deleteCustomCategory}
-        />
-      )}
-    </div>
+        {isModalOpen && (
+          <AddReceiptModal
+            onClose={() => setIsModalOpen(false)}
+            onAddReceipt={addReceipt}
+            allCategories={allCategories}
+          />
+        )}
+
+        {isChatModalOpen && (
+          <GlobalChatModal
+            onClose={() => setIsChatModalOpen(false)}
+          />
+        )}
+
+        {isCategoriesModalOpen && (
+          <ManageCategoriesModal
+            onClose={() => setIsCategoriesModalOpen(false)}
+            defaultCategories={DEFAULT_CATEGORIES}
+            customCategories={customCategories}
+            onAddCategory={addCustomCategory}
+            onUpdateCategory={updateCustomCategory}
+            onDeleteCategory={deleteCustomCategory}
+          />
+        )}
+      </div>
+    </ReceiptsProvider>
   );
 }
 

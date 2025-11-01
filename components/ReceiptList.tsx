@@ -3,15 +3,11 @@ import { Receipt } from '../types';
 import { ReceiptItem } from './ReceiptItem';
 import { DownloadIcon, CalendarIcon, ChevronDownIcon } from './icons';
 import { exportToCSV } from '../utils/csv';
+import { useReceipts } from '../contexts/ReceiptsContext';
 
-interface ReceiptListProps {
-  receipts: Receipt[];
-  onDelete: (id: string) => void;
-  onUpdate: (receipt: Receipt) => void;
-  allCategories: string[];
-}
-
-export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, onDelete, onUpdate, allCategories }) => {
+export const ReceiptList: React.FC = () => {
+  const { receipts } = useReceipts();
+  
   const groupedReceipts = receipts.reduce((acc, receipt) => {
     const date = receipt.date;
     if (!acc[date]) {
@@ -92,7 +88,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, onDelete, on
               <div id={`receipts-for-${date}`} className="px-4 md:px-6 pb-4 md:pb-6">
                 <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                   {groupedReceipts[date].map(receipt => (
-                    <ReceiptItem key={receipt.id} receipt={receipt} onDelete={onDelete} onUpdate={onUpdate} allCategories={allCategories} />
+                    <ReceiptItem key={receipt.id} receipt={receipt} />
                   ))}
                 </div>
               </div>

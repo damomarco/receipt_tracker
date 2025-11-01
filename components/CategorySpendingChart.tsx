@@ -1,43 +1,41 @@
 import React from 'react';
 import { Receipt, Category } from '../types';
-import { categoryColorMap } from './ReceiptItem';
 import { ChartBarIcon } from './icons';
+import { useReceipts } from '../contexts/ReceiptsContext';
+import { getCategoryColorName } from '../utils/colors';
 
-interface CategorySpendingChartProps {
-  receipts: Receipt[];
-}
-
-// Fix: Define explicit types for the spending data structure to guide TypeScript's
-// type inference and prevent errors when accessing properties on the reduced object.
 interface SpendingData {
   categories: Record<string, number>;
   overallTotal: number;
 }
 type SpendingByCurrency = Record<string, SpendingData>;
 
-export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ receipts }) => {
-  // The initial value of reduce is cast to SpendingByCurrency to correctly type the accumulator.
-  // This resolves all subsequent TypeScript errors related to accessing properties on an 'unknown' type.
-  const spendingByCurrency = receipts.reduce((acc, receipt) => {
-    const currency = receipt.currency || 'UNKNOWN';
-    if (!acc[currency]) {
-      acc[currency] = { categories: {}, overallTotal: 0 };
-    }
+export const CategorySpendingChart: React.FC = () => {
+  const { receipts } = useReceipts();
 
-    if (receipt.items) {
-      receipt.items.forEach(item => {
-        const category = item.category || 'Other';
-        acc[currency].categories[category] = (acc[currency].categories[category] || 0) + item.price;
-        acc[currency].overallTotal += item.price;
-      });
-    }
-
-    return acc;
-  }, {} as SpendingByCurrency);
+  const spendingByCurrency = React.useMemo(() => {
+    return receipts.reduce((acc, receipt) => {
+      const currency = receipt.currency || 'UNKNOWN';
+      if (!acc[currency]) {
+        acc[currency] = { categories: {}, overallTotal: 0 };
+      }
+  
+      if (receipt.items) {
+        receipt.items.forEach(item => {
+          const category = item.category || 'Other';
+          acc[currency].categories[category] = (acc[currency].categories[category] || 0) + item.price;
+          acc[currency].overallTotal += item.price;
+        });
+      }
+  
+      return acc;
+    }, {} as SpendingByCurrency);
+  }, [receipts]);
 
   const currencyEntries = Object.entries(spendingByCurrency);
 
-  if (currencyEntries.length === 0 || currencyEntries.every(([, data]) => data.overallTotal <= 0)) {
+  // Fix: Cast `data` to `SpendingData` to correctly access `overallTotal`.
+  if (currencyEntries.length === 0 || currencyEntries.every(([, data]) => (data as SpendingData).overallTotal <= 0)) {
     return null;
   }
 
@@ -50,11 +48,13 @@ export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ re
       
       <div className="space-y-6">
         {currencyEntries.map(([currency, data]) => {
-          const sortedCategories = Object.entries(data.categories)
+          // Fix: Cast `data` to `SpendingData` to resolve type errors.
+          const { categories, overallTotal } = data as SpendingData;
+          const sortedCategories = Object.entries(categories)
             .map(([category, total]) => ({ category: category as Category, total }))
             .sort((a, b) => b.total - a.total);
 
-          if (data.overallTotal <= 0) return null;
+          if (overallTotal <= 0) return null;
 
           return (
             <div key={currency}>
@@ -65,10 +65,9 @@ export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ re
               {/* Segmented Bar */}
               <div className="flex h-4 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700" role="progressbar" aria-label={`Spending breakdown for ${currency}`}>
                 {sortedCategories.map(({ category, total }) => {
-                  const percentage = (total / data.overallTotal) * 100;
-                  const colorClasses = categoryColorMap[category] || categoryColorMap.Other;
-                  const colorName = colorClasses.match(/bg-([a-z]+)-/)?.[1];
-                  const barColorClass = colorName ? `bg-${colorName}-500` : 'bg-gray-500';
+                  const percentage = (total / overallTotal) * 100;
+                  const colorName = getCategoryColorName(category);
+                  const barColorClass = `bg-${colorName}-500`;
                   
                   return (
                     <div
@@ -84,10 +83,9 @@ export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ re
               {/* Legend */}
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                 {sortedCategories.map(({ category, total }) => {
-                  const percentage = (total / data.overallTotal) * 100;
-                  const colorClasses = categoryColorMap[category] || categoryColorMap.Other;
-                  const colorName = colorClasses.match(/bg-([a-z]+)-/)?.[1];
-                  const dotColorClass = colorName ? `bg-${colorName}-500` : 'bg-gray-500';
+                  const percentage = (total / overallTotal) * 100;
+                  const colorName = getCategoryColorName(category);
+                  const dotColorClass = `bg-${colorName}-500`;
 
                   return (
                     <div key={category} className="flex justify-between items-center text-sm">

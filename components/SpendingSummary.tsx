@@ -1,28 +1,29 @@
 import React from 'react';
-import { Receipt } from '../types';
 import { HashtagIcon, CashIcon } from './icons';
 import { CategorySpendingChart } from './CategorySpendingChart';
+import { useReceipts } from '../contexts/ReceiptsContext';
 
-interface SpendingSummaryProps {
-  receipts: Receipt[];
-}
+export const SpendingSummary: React.FC = () => {
+  const { receipts } = useReceipts();
 
-export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ receipts }) => {
+  const totalReceipts = receipts.length;
+
+  const totalsByCurrency = React.useMemo(() => {
+    return receipts.reduce((acc, receipt) => {
+      const currency = receipt.currency || 'UNKNOWN';
+      if (!acc[currency]) {
+        acc[currency] = 0;
+      }
+      acc[currency] += receipt.total;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [receipts]);
+
+  const currencyEntries = Object.entries(totalsByCurrency);
+
   if (receipts.length === 0) {
     return null; // Don't show the summary if there are no receipts
   }
-
-  const totalReceipts = receipts.length;
-  const totalsByCurrency = receipts.reduce((acc, receipt) => {
-    const currency = receipt.currency || 'UNKNOWN';
-    if (!acc[currency]) {
-      acc[currency] = 0;
-    }
-    acc[currency] += receipt.total;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const currencyEntries = Object.entries(totalsByCurrency);
 
   return (
     <div className="mb-6 bg-white dark:bg-gray-800/50 p-4 md:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
@@ -58,7 +59,7 @@ export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ receipts }) =>
           </div>
         </div>
       </div>
-      <CategorySpendingChart receipts={receipts} />
+      <CategorySpendingChart />
     </div>
   );
 };

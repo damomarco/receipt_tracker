@@ -2,25 +2,12 @@ import React, { useState } from 'react';
 import { Receipt, Category, ReceiptItemData } from '../types';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, ChevronDownIcon, PlusCircleIcon } from './icons';
 import { ImageModal } from './ImageModal';
+import { useReceipts } from '../contexts/ReceiptsContext';
+import { getCategoryColorName, getCategoryDisplayClasses } from '../utils/colors';
 
 interface ReceiptItemProps {
   receipt: Receipt;
-  onDelete: (id: string) => void;
-  onUpdate: (receipt: Receipt) => void;
-  allCategories: string[];
 }
-
-export const categoryColorMap: Record<string, string> = {
-  'Food & Drink': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-  'Groceries': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
-  'Transportation': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
-  'Shopping': 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200',
-  'Lodging': 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
-  'Entertainment': 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200',
-  'Utilities': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200',
-  'Health & Wellness': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
-  'Other': 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-};
 
 const StatusIndicator: React.FC<{ status: Receipt['status'] }> = ({ status }) => {
   switch (status) {
@@ -35,7 +22,9 @@ const StatusIndicator: React.FC<{ status: Receipt['status'] }> = ({ status }) =>
   }
 }
 
-export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onUpdate, allCategories }) => {
+export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
+  // Fix: use deleteReceipt and updateReceipt from context, which were incorrectly named onDelete and onUpdate.
+  const { deleteReceipt, updateReceipt, allCategories } = useReceipts();
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [isItemsVisible, setIsItemsVisible] = useState(false);
@@ -80,7 +69,8 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
   }
 
   const handleSave = () => {
-    onUpdate(editedReceipt);
+    // Fix: use updateReceipt from context.
+    updateReceipt(editedReceipt);
     setIsEditing(false);
   };
   
@@ -116,7 +106,8 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
             ) : (
               <>
                 <button onClick={() => setIsEditing(true)} className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full" aria-label="Edit receipt"><EditIcon className="w-6 h-6"/></button>
-                <button onClick={() => onDelete(receipt.id)} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-6 h-6"/></button>
+                {/* Fix: use deleteReceipt from context. */}
+                <button onClick={() => deleteReceipt(receipt.id)} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-6 h-6"/></button>
               </>
             )}
           </div>
@@ -171,11 +162,15 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{receipt.merchant.translated}</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mb-2">{receipt.merchant.original}</p>
                         <div className="flex flex-wrap gap-2">
-                        {uniqueCategories.map(category => (
-                          <span key={category} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${categoryColorMap[category] || categoryColorMap['Other']}`}>
-                            {category}
-                          </span>
-                        ))}
+                        {uniqueCategories.map(category => {
+                          const colorName = getCategoryColorName(category);
+                          const displayClasses = getCategoryDisplayClasses(colorName);
+                          return (
+                            <span key={category} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${displayClasses}`}>
+                              {category}
+                            </span>
+                          );
+                        })}
                         </div>
                       </div>
                       <StatusIndicator status={receipt.status} />
@@ -191,17 +186,21 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, onDelete, onU
                       </button>
                       {isItemsVisible && (
                         <ul className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-600 space-y-1 text-sm">
-                          {receipt.items.map((item, index) => (
-                            <li key={index} className="flex justify-between items-center">
-                              <div className="flex items-center">
-                                <span className="text-gray-700 dark:text-gray-300 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
-                                <span className={`text-xs font-medium ml-2 px-2 py-0.5 rounded-full ${categoryColorMap[item.category] || categoryColorMap['Other']}`}>{item.category}</span>
-                              </div>
-                              <span className="text-gray-800 dark:text-gray-100 font-medium flex-shrink-0">
-                                {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
-                              </span>
-                            </li>
-                          ))}
+                          {receipt.items.map((item, index) => {
+                             const colorName = getCategoryColorName(item.category);
+                             const displayClasses = getCategoryDisplayClasses(colorName);
+                            return (
+                              <li key={index} className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <span className="text-gray-700 dark:text-gray-300 truncate pr-4" title={item.description.translated}>{item.description.translated}</span>
+                                  <span className={`text-xs font-medium ml-2 px-2 py-0.5 rounded-full ${displayClasses}`}>{item.category}</span>
+                                </div>
+                                <span className="text-gray-800 dark:text-gray-100 font-medium flex-shrink-0">
+                                  {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

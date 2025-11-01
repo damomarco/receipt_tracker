@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Receipt } from '../types';
 import { askAboutAllReceipts } from '../services/geminiService';
 import { XIcon, SpinnerIcon } from './icons';
+import { useReceipts } from '../contexts/ReceiptsContext';
 
 interface GlobalChatModalProps {
-  receipts: Receipt[];
   onClose: () => void;
 }
 
-export const GlobalChatModal: React.FC<GlobalChatModalProps> = ({ receipts, onClose }) => {
+export const GlobalChatModal: React.FC<GlobalChatModalProps> = ({ onClose }) => {
+  const { receipts } = useReceipts();
   const [prompt, setPrompt] = useState('');
   const [history, setHistory] = useState<{ user: string; model: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
