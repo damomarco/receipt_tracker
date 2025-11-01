@@ -32,6 +32,7 @@ export interface Receipt {
     translated: string;
   };
   date: string; // YYYY-MM-DD
+  location?: string; // e.g., "Tokyo, Japan"
   total: number;
   currency: string;
   items: ReceiptItemData[];
@@ -44,6 +45,7 @@ export interface ExtractedReceiptData {
     translated: string;
   };
   date: string; // Should be in YYYY-MM-DD format
+  location?: string; // e.g., "Tokyo, Japan"
   total: number;
   currency: string;
   items: ReceiptItemData[];

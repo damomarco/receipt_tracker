@@ -4,9 +4,24 @@ This document outlines the planned features and future direction for the Travel 
 
 ## Short-Term Goals (Next 1-3 Months)
 
+### Recently Completed
+
 -   **Custom Categories**:
-    -   **Status**: Next Up
-    -   **Description**: Allow users to add, edit, and delete their own custom expense categories, which will then appear as options in the category dropdowns.
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented a settings modal allowing users to add, edit, and delete their own custom expense categories. These categories are now used by the Gemini AI and throughout the app's UI.
+
+-   **Performance Optimization & Code Refactor**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Conducted a full code audit. Refactored state management to use React Context, eliminating prop drilling. Memoized expensive calculations for a more responsive UI and implemented dynamic coloring for custom categories.
+
+-   **Expense Categorization**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
+-   **Enhanced Reporting Dashboard**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented a "Spending Summary" view that shows total expenses and a segmented bar chart that visualizes spending by category.
+
+### Planned
 
 -   **Enhanced Reporting Filtering**:
     -   **Status**: Planned
@@ -19,17 +34,6 @@ This document outlines the planned features and future direction for the Travel 
 -   **Production Build Process**:
     -   **Status**: Planned
     -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization.
-
----
-
-### Recently Completed
-
--   **Expense Categorization**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
--   **Enhanced Reporting Dashboard**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: Implemented a "Spending Summary" view that shows total expenses and a segmented bar chart that visualizes spending by category.
 
 ## Medium-Term Goals (3-6 Months)
 

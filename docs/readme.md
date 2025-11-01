@@ -8,6 +8,7 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **AI-Powered Itemization & Categorization**: Automatically extracts and categorizes individual line items from the receipt, providing a granular breakdown of expenses.
 - **Bilingual Support**: Translates Japanese merchant names and item descriptions into English for clarity.
 - **Global AI Chat**: Ask questions about your entire collection of receipts. Get instant answers for things like total spending, most expensive items, or expenses by category.
+- **Custom Category Management**: Add, edit, and delete your own expense categories for personalized tracking.
 - **Advanced Spending Summary**: Visualize your spending with a consolidated, segmented bar chart that shows the percentage breakdown by category for each currency.
 - **Full Offline Capability**: Add new receipts even without an internet connection. The app automatically syncs them once you're back online.
 - **Granular Data Editing**: Easily correct or update any information extracted by the AI, including the category, price, and description of each individual line item.
@@ -23,7 +24,7 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **Styling**: Tailwind CSS (via CDN)
 - **AI**: Google Gemini API (`gemini-2.5-flash`)
 - **Local Storage**: `localStorage` API for offline data persistence.
-- **State Management**: React Hooks (`useState`, `useEffect`) and custom hooks.
+- **State Management**: React Context API and Hooks (`useState`, `useEffect`, `useContext`, `useMemo`) for centralized and performant state management.
 
 ## How to Use
 

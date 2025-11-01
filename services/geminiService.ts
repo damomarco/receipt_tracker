@@ -1,7 +1,6 @@
-
-
 import { GoogleGenAI, Type } from "@google/genai";
-import { ExtractedReceiptData, Receipt, DEFAULT_CATEGORIES } from "../types";
+// FIX: Import the 'Receipt' type to resolve a type error.
+import { ExtractedReceiptData, Receipt } from "../types";
 
 const API_KEY = process.env.API_KEY;
 
@@ -35,9 +34,13 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
         type: Type.STRING,
         description: "The date of the transaction in YYYY-MM-DD format. Handle Japanese date formats like 令和 (Reiwa).",
       },
+      location: {
+        type: Type.STRING,
+        description: "The city or country where the transaction took place, if identifiable from the receipt. e.g., 'Tokyo, Japan'. If it cannot be determined, leave this field empty.",
+      },
       total: {
         type: Type.NUMBER,
-        description: "The final total amount of the transaction.",
+        description: "The final total amount of the transaction. This should be the sum of all items, including taxes and fees.",
       },
       currency: {
         type: Type.STRING,
@@ -45,7 +48,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
       },
       items: {
         type: Type.ARRAY,
-        description: "A list of all items purchased, including their description and price. Translate Japanese item descriptions to English.",
+        description: "A list of all items purchased. This MUST include not only products, but also any taxes (like 消費税), service charges, discounts, or other fees that contribute to the final total. Each should be a separate item in the array. Translate Japanese item descriptions to English.",
         items: {
           type: Type.OBJECT,
           properties: {
@@ -69,7 +72,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
             },
             category: {
               type: Type.STRING,
-              description: `Categorize the item. Choose one of the following categories: ${allCategories.join(', ')}. If unsure, use 'Other'.`,
+              description: `Categorize the item. Choose one of the following categories: ${allCategories.join(', ')}. For items like tax or service fees, use 'Other' or an appropriate category if available. If unsure, use 'Other'.`,
               enum: allCategories,
             },
           },
@@ -88,7 +91,7 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
   };
 
   const textPart = {
-    text: `Analyze this Japanese receipt. Extract the merchant name, date, total amount, currency, and a list of all purchased items with their prices. For each item, translate its description to English and assign it an appropriate expense category from the provided list. Provide the date in YYYY-MM-DD format. Ensure accuracy.`,
+    text: `Analyze this receipt. First, try to identify the location (city, country) from the receipt's text. Then extract all other details: merchant name, date (in YYYY-MM-DD format), total, currency, and a detailed list of items. This list MUST include products, taxes (like 消費税), service charges, and any other fees to ensure the sum of item prices equals the final total. Translate Japanese text to English. Assign an expense category for each item from the provided list. If you cannot determine a location, leave the location field empty.`,
   };
 
   try {
@@ -110,17 +113,10 @@ export const processReceiptImage = async (base64Image: string, allCategories: st
         throw new Error("Extracted data is missing required fields or items are malformed.");
     }
     
-    // If Gemini fails itemization but gets a total, create a fallback item to prevent errors.
-    if (parsedData.items.length === 0 && parsedData.total > 0) {
-        parsedData.items.push({
-            description: {
-                original: '不明',
-                translated: 'Uncategorized Item'
-            },
-            price: parsedData.total,
-            category: 'Other'
-        });
-    }
+    // Enforce data integrity: The final total MUST be the sum of its items.
+    // This overrides the 'total' extracted by the AI, making the item list the single source of truth.
+    const calculatedTotal = parsedData.items.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+    parsedData.total = calculatedTotal;
 
     return parsedData;
 
