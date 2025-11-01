@@ -4,21 +4,32 @@ This document outlines the planned features and future direction for the Travel 
 
 ## Short-Term Goals (Next 1-3 Months)
 
--   **Expense Categorization**:
-    -   Use the Gemini API to automatically suggest an expense category (e.g., "Food & Drink", "Transportation", "Accommodation") based on the merchant name or items on the receipt.
-    -   Allow users to create custom categories and manually assign them.
+-   **Custom Categories**:
+    -   **Status**: Next Up
+    -   **Description**: Allow users to add, edit, and delete their own custom expense categories, which will then appear as options in the category dropdowns.
 
--   **Enhanced Reporting**:
-    -   Create a simple dashboard view to visualize spending.
-    -   Display total spending for the current trip and charts showing spending by category.
+-   **Enhanced Reporting Filtering**:
+    -   **Status**: Planned
+    -   **Description**: Add date-range filters to the "Spending Summary" to allow users to visualize their spending over specific periods (e.g., last 7 days, specific trip dates).
 
 -   **Improved Currency Conversion**:
-    -   Integrate a free currency exchange rate API.
-    -   Allow the user to set a "home currency" and automatically display converted totals for all receipts.
+    -   **Status**: Planned
+    -   **Description**: Integrate a free currency exchange rate API. Allow the user to set a "home currency" and automatically display converted totals for all receipts.
 
 -   **Production Build Process**:
-    -   Remove the Tailwind CSS CDN script.
-    -   Integrate Tailwind CSS into a proper PostCSS build process for better performance and production optimization.
+    -   **Status**: Planned
+    -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization.
+
+---
+
+### Recently Completed
+
+-   **Expense Categorization**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
+-   **Enhanced Reporting Dashboard**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented a "Spending Summary" view that shows total expenses and a segmented bar chart that visualizes spending by category.
 
 ## Medium-Term Goals (3-6 Months)
 
@@ -28,8 +39,8 @@ This document outlines the planned features and future direction for the Travel 
     -   This will allow users to securely back up their data and access their receipts from multiple devices.
 
 -   **Advanced Search and Filtering**:
-    -   Implement a search bar to find receipts by merchant name, item, or date range.
-    -   Add filtering options to view receipts only from specific categories.
+    -   Implement a global search bar to find receipts by merchant name, item, or date range.
+    -   Add filtering options to the main receipt list to view receipts only from specific categories.
 
 -   **Trip Management**:
     -   Allow users to group receipts into distinct "trips".

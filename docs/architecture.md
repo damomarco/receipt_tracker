@@ -23,52 +23,50 @@ The application is a client-side, single-page application (SPA) built with **Rea
 
 ## Component Breakdown
 
--   **`App.tsx`**: The root component. It manages the primary application state, including the list of all receipts and the visibility of the "Add Receipt" and "Global Chat" modals. It also orchestrates the offline/online synchronization logic.
+-   **`App.tsx`**: The root component. It manages the primary application state, including the list of all receipts and modal visibility. It orchestrates the offline/online synchronization logic and contains a crucial `useEffect` hook for performing a one-time data migration to transition older receipt data to the new item-level category structure.
 -   **`components/`**:
-    -   `Header.tsx`: A stateless component that displays the application title and the dynamic sync status indicator (Offline, Syncing, Synced).
-    -   `ReceiptList.tsx`: Renders receipts in collapsible sections grouped by date. It handles the logic for grouping and sorting, and manages the expanded/collapsed state of each date group. It also triggers the CSV export utility.
-    -   `ReceiptItem.tsx`: Represents a single receipt in the list. It manages its own `isEditing` state to switch between view and edit modes. It displays a thumbnail of the receipt which, when tapped, opens a fullscreen modal to view the full image.
-    -   `AddReceiptModal.tsx`: A complex modal component for adding new receipts. It handles file input, displays a preview of the receipt image, communicates with the `geminiService` to process the image, and allows the user to review/edit the extracted data—including an editable itemized list—before saving.
-    -   `GlobalChatModal.tsx`: A modal for interacting with the Gemini API about the entire collection of receipts. It manages its own chat history and loading states, providing a conversational interface for querying expense data.
-    -   `ImageModal.tsx`: A reusable modal component that displays a given image source in a fullscreen, dismissible overlay. It provides an accessible way for users to inspect images in detail.
-    -   `icons.tsx`: A central repository for all SVG icons used in the application, making them easy to manage and reuse.
+    -   `Header.tsx`: Displays the application title and the dynamic sync status indicator.
+    -   `ReceiptList.tsx`: Renders receipts in collapsible sections grouped by date and triggers the CSV export utility.
+    -   `ReceiptItem.tsx`: Represents a single receipt. It manages its `isEditing` state, allowing users to edit receipt details down to the individual item's category and price. In view mode, it displays multiple category tags based on the items within.
+    -   `AddReceiptModal.tsx`: A complex modal for adding new receipts. It communicates with `geminiService` and allows the user to review/edit the AI-extracted data, including an editable itemized list where each item has its own category selector.
+    -   `GlobalChatModal.tsx`: A modal for interacting with the Gemini API about the entire collection of receipts.
+    -   `SpendingSummary.tsx`: Displays high-level statistics like total receipts and spending. It contains the `CategorySpendingChart`.
+    -   `CategorySpendingChart.tsx`: Aggregates spending data from *individual items* across all receipts. It visualizes this data as a segmented bar chart showing the percentage breakdown of spending by category, complete with a detailed legend. It also handles grouping by currency.
+    -   `ImageModal.tsx`: A reusable modal for displaying a fullscreen, zoomable image of a receipt.
+    -   `icons.tsx`: A central repository for all SVG icons.
 
 ## State Management
 
 State management is handled primarily through React's built-in hooks.
 
--   **`useLocalStorage`**: A custom hook that abstracts the interaction with the browser's `localStorage`. It keeps the `receipts` state synchronized with local storage, ensuring data persistence across sessions and enabling the app's offline functionality.
--   **`useOnlineStatus`**: A custom hook that listens to the browser's `online` and `offline` events. It provides a simple boolean flag that the `App.tsx` component uses to determine the network status and decide when to sync pending receipts.
--   **Component State (`useState`)**: Local component state is used for UI concerns, such as the open/closed state of modals (`isModalOpen` in `App.tsx`), the edit mode for a specific receipt (`isEditing` in `ReceiptItem.tsx`), or the visibility of the itemized list (`isItemsVisible` in `ReceiptItem.tsx`).
+-   **`useLocalStorage`**: A custom hook abstracting interaction with `localStorage` to ensure data persistence and enable offline functionality.
+-   **`useOnlineStatus`**: A custom hook that provides a boolean flag indicating the network status, used to manage receipt syncing.
+-   **Component State (`useState`)**: Used for local UI concerns, such as modal visibility, edit modes, and the expanded/collapsed state of UI elements.
 
 ## Services Layer
 
 -   **`services/geminiService.ts`**: This file acts as an abstraction layer for all communication with the Google Gemini API.
-    -   `processReceiptImage`: Takes a base64 image string, sends it to the Gemini API with a specific prompt and a JSON schema, and returns the structured data (`ExtractedReceiptData`), which now includes an array of `items`.
-    -   `askAboutAllReceipts`: Takes the entire list of receipts and a user's text prompt, sends them to the Gemini API in a structured context, and returns the model's text response.
+    -   `processReceiptImage`: Takes a base64 image string and sends it to the Gemini API with a JSON schema that now requires a `category` for *each item* in the `items` array.
+    -   `askAboutAllReceipts`: Takes the list of receipts and a user's prompt to provide a conversational query interface.
 
-## Data Flow
+## Data Flow & Migration
 
-### Adding a Receipt (Online)
+### Adding a Receipt
 
-1.  User clicks the `+` button, setting `isModalOpen` to `true` in `App.tsx`.
-2.  `AddReceiptModal` mounts. User uploads an image.
-3.  The modal calls `geminiService.processReceiptImage`.
-4.  The service returns structured JSON data, including an array of items, which is stored in the modal's local state.
-5.  User reviews and edits the data, including the itemized list.
-6.  User clicks "Save". The modal calls the `onAddReceipt` prop function passed down from `App.tsx`.
-7.  `App.tsx` creates a new receipt object with a status of `'synced'`, adds it to the main `receipts` array, and updates `localStorage` via `setReceipts`.
+1.  User uploads an image in the `AddReceiptModal`.
+2.  The modal calls `geminiService.processReceiptImage`. The service returns structured JSON where each item has its own AI-suggested category.
+3.  The user can review and edit each item's category, price, or description individually.
+4.  On save, the `onAddReceipt` function in `App.tsx` is called.
+5.  `App.tsx` creates a new receipt object, now with categorized items, and sets its status (`'synced'` or `'pending'`) based on the current online status.
 
-### Adding a Receipt (Offline)
+### Data Migration
 
-1.  The flow is identical to the online flow, except for the final step.
-2.  When `App.tsx` creates the new receipt object, it checks the `isOnline` status from the `useOnlineStatus` hook.
-3.  Because the app is offline, the receipt is saved with a status of `'pending'`.
+To handle the architectural shift from receipt-level to item-level categorization, a one-time migration script runs inside a `useEffect` hook in `App.tsx`.
+1.  On app load, it checks if any receipts in `localStorage` follow the old data structure (a `category` property on the receipt itself).
+2.  If found, it migrates them by assigning the parent receipt's category to each of its items and then removing the now-obsolete top-level `category` property.
+3.  This ensures a seamless, non-destructive update for existing users without data loss.
 
 ### Synchronization
 
-1.  When the device reconnects to the internet, the `useOnlineStatus` hook updates its state.
-2.  A `useEffect` hook in `App.tsx` is triggered by the change in `isOnline`.
-3.  It filters the `receipts` array for any items with a `'pending'` status.
-4.  It updates their status to `'syncing'` to provide visual feedback.
-5.  After a simulated delay, it updates their status to `'synced'`. (In a real-world scenario, this is where actual API calls to a backend would happen).
+1.  When the device reconnects to the internet, `useOnlineStatus` triggers a `useEffect` in `App.tsx`.
+2.  The effect finds all receipts with a `'pending'` status, updates them to `'syncing'`, and then to `'synced'`. (This simulates a backend sync).

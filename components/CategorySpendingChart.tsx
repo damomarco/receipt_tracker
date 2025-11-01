@@ -15,7 +15,9 @@ interface SpendingData {
 type SpendingByCurrency = Record<string, SpendingData>;
 
 export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ receipts }) => {
-  const spendingByCurrency = receipts.reduce<SpendingByCurrency>((acc, receipt) => {
+  // FIX: Cast the initial value of reduce to SpendingByCurrency to correctly type the accumulator.
+  // This resolves all subsequent type errors in the component.
+  const spendingByCurrency = receipts.reduce((acc, receipt) => {
     const currency = receipt.currency || 'UNKNOWN';
     if (!acc[currency]) {
       acc[currency] = { categories: {}, overallTotal: 0 };
@@ -30,7 +32,7 @@ export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ re
     }
 
     return acc;
-  }, {});
+  }, {} as SpendingByCurrency);
 
   const currencyEntries = Object.entries(spendingByCurrency);
 
