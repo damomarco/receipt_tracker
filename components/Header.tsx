@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon } from './icons';
+import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon } from './icons';
 import { useTheme } from '../hooks/useTheme';
+import { useCurrency } from '../contexts/CurrencyContext';
+import { currencies } from '../config/currencies';
+import { SupportedCurrencyCode } from '../types';
 
 interface HeaderProps {
   isOnline: boolean;
@@ -39,6 +42,7 @@ const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories'>>
 export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { homeCurrency, setHomeCurrency, ratesLastUpdated } = useCurrency();
   const settingsRef = useRef<HTMLDivElement>(null);
 
   const themes = [
@@ -46,6 +50,15 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
     { name: 'Dark', value: 'dark', icon: MoonIcon },
     { name: 'System', value: 'system', icon: ComputerDesktopIcon },
   ];
+  
+  const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    if (value === 'none') {
+      setHomeCurrency(null);
+    } else {
+      setHomeCurrency(value as SupportedCurrencyCode);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,6 +69,22 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+  
+  const timeAgo = (date: string | null): string => {
+    if (!date) return 'never';
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return "just now";
+  }
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-md dark:shadow-gray-800/50 sticky top-0 z-40">
@@ -89,11 +118,12 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
               </button>
               {isSettingsOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
                   role="menu"
                   aria-orientation="vertical"
                 >
                   <div className="py-1" role="none">
+                    <div className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Settings</div>
                     <button
                       onClick={() => {
                         onManageCategories();
@@ -105,6 +135,24 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
                       <CogIcon className="w-5 h-5 mr-3" />
                       Manage Categories
                     </button>
+                     <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                      <label htmlFor="home-currency" className="flex items-center text-sm font-medium">
+                        <CashIcon className="w-5 h-5 mr-3" />
+                        Home Currency
+                      </label>
+                      <select
+                        id="home-currency"
+                        value={homeCurrency || 'none'}
+                        onChange={handleCurrencyChange}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-gray-50 dark:bg-gray-700"
+                      >
+                        <option value="none">None</option>
+                        {currencies.map(c => <option key={c.code} value={c.code}>{c.code} - {c.name}</option>)}
+                      </select>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                        Rates last updated: {timeAgo(ratesLastUpdated)}
+                      </p>
+                    </div>
                   </div>
                   <div className="border-t border-gray-200 dark:border-gray-700"></div>
                   <div className="py-1" role="none">

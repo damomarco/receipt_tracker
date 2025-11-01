@@ -93,7 +93,7 @@ export const CategorySpendingChart: React.FC = () => {
                         <span className="ml-2 text-gray-500 dark:text-gray-400">({percentage.toFixed(1)}%)</span>
                       </div>
                       <span className="font-semibold text-gray-800 dark:text-gray-100 flex-shrink-0 ml-2">
-                        {new Intl.NumberFormat('ja-JP', { style: 'currency', currency, minimumFractionDigits: 0 }).format(total)}
+                        {new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(total)}
                       </span>
                     </div>
                   );

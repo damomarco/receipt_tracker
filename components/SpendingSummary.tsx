@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useReceipts } from '../contexts/ReceiptsContext';
-import { ReceiptIcon, CashIcon, ChevronDownIcon } from './icons';
+import { ReceiptIcon, CashIcon, ChevronDownIcon, SpinnerIcon } from './icons';
 import { CategorySpendingChart } from './CategorySpendingChart';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface Totals {
   [currency: string]: number;
@@ -14,7 +15,38 @@ interface SpendingSummaryProps {
 
 export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ dateFilter, setDateFilter }) => {
   const { receipts } = useReceipts();
+  const { homeCurrency, getRate } = useCurrency();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [convertedTotal, setConvertedTotal] = useState<number | null>(null);
+  const [isLoadingTotal, setIsLoadingTotal] = useState(false);
+
+  useEffect(() => {
+    if (!homeCurrency || receipts.length === 0) {
+      setConvertedTotal(null);
+      return;
+    }
+
+    const calculateTotal = async () => {
+        setIsLoadingTotal(true);
+        const promises = receipts.map(async receipt => {
+            const rate = await getRate(receipt.date, receipt.currency, homeCurrency);
+            if (rate !== null) {
+                return receipt.total * rate;
+            }
+            console.warn(`Could not get exchange rate for ${receipt.currency} on ${receipt.date}`);
+            return 0; // Exclude from total if rate is unavailable
+        });
+        
+        const convertedValues = await Promise.all(promises);
+        const total = convertedValues.reduce((sum, val) => sum + val, 0);
+        
+        setConvertedTotal(total);
+        setIsLoadingTotal(false);
+    };
+
+    calculateTotal();
+
+  }, [receipts, homeCurrency, getRate]);
 
   const totalsByCurrency = React.useMemo(() => {
     return receipts.reduce((acc, receipt) => {
@@ -99,6 +131,24 @@ export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ dateFilter, se
               <p className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mt-2">{receipts.length}</p>
             </div>
             
+            {homeCurrency && (convertedTotal !== null || isLoadingTotal) && (
+              <div className="p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg sm:col-span-2 md:col-span-1">
+                <div className="flex items-center text-blue-600 dark:text-blue-300">
+                  <CashIcon className="w-5 h-5 mr-2" />
+                  <h3 className="text-sm font-medium uppercase tracking-wider">Grand Total ({homeCurrency})</h3>
+                </div>
+                 {isLoadingTotal ? (
+                    <div className="flex items-center justify-center h-10">
+                        <SpinnerIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                ) : (
+                    <p className="text-3xl font-semibold text-blue-900 dark:text-blue-100 mt-2">
+                    {new Intl.NumberFormat(undefined, { style: 'currency', currency: homeCurrency }).format(convertedTotal!)}
+                    </p>
+                )}
+              </div>
+            )}
+            
             {sortedCurrencies.map(currency => (
               <div key={currency} className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex items-center text-gray-500 dark:text-gray-400">
@@ -106,10 +156,11 @@ export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ dateFilter, se
                   <h3 className="text-sm font-medium uppercase tracking-wider">Total Spent ({currency})</h3>
                 </div>
                 <p className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mt-2">
-                  {new Intl.NumberFormat('ja-JP', { style: 'currency', currency, minimumFractionDigits: 0 }).format(totalsByCurrency[currency])}
+                  {new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(totalsByCurrency[currency])}
                 </p>
               </div>
             ))}
+
             {receipts.length > 0 && sortedCurrencies.length === 0 && (
                  <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg sm:col-span-2">
                     <div className="flex items-center text-gray-500 dark:text-gray-400">

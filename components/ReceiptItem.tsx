@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Receipt, ReceiptItemData } from '../types';
 import { useReceipts } from '../contexts/ReceiptsContext';
@@ -6,6 +7,7 @@ import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon,
 import { ImageModal } from './ImageModal';
 import { getCategoryColorName, getCategoryDisplayClasses } from '../utils/colors';
 import { getImage } from '../services/imageStore';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 
 interface ReceiptItemProps {
@@ -21,6 +23,44 @@ const ReceiptStatus: React.FC<{ status: Receipt['status'] }> = ({ status }) => {
   }
   return <CheckCircleIcon className="w-5 h-5 text-green-500" title="Synced" />;
 };
+
+const ConvertedAmount: React.FC<{ receipt: Receipt }> = ({ receipt }) => {
+    const { homeCurrency, getRate } = useCurrency();
+    const [converted, setConverted] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!homeCurrency || homeCurrency === receipt.currency) {
+            setConverted(null);
+            return;
+        }
+
+        let isMounted = true;
+        setConverted('...'); // indicate loading
+
+        const convert = async () => {
+            const rate = await getRate(receipt.date, receipt.currency, homeCurrency);
+            if (isMounted && rate !== null) {
+                const value = receipt.total * rate;
+                const formatted = new Intl.NumberFormat(undefined, { style: 'currency', currency: homeCurrency, maximumFractionDigits: 2 }).format(value);
+                setConverted(`(approx. ${formatted})`);
+            } else if (isMounted) {
+                setConverted(null); // hide if rate not found
+            }
+        };
+
+        convert();
+        return () => { isMounted = false; };
+    }, [receipt.total, receipt.currency, receipt.date, homeCurrency, getRate]);
+    
+    if (!converted) return null;
+    
+    if (converted === '...') {
+        return <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">Converting...</p>;
+    }
+
+    return <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{converted}</p>;
+};
+
 
 export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
   const { deleteReceipt, updateReceipt, allCategories } = useReceipts();
@@ -186,8 +226,9 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
                 </div>
               )}
               <p className="text-2xl font-light text-gray-800 dark:text-gray-200 mt-1">
-                {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(receipt.total)}
+                {new Intl.NumberFormat(undefined, { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(receipt.total)}
               </p>
+              <ConvertedAmount receipt={receipt} />
             </div>
           </div>
           <div className="flex flex-col items-end space-y-2">
@@ -216,7 +257,7 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
                                 </div>
                             </div>
                             <span className="font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">
-                                {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0 }).format(item.price)}
+                                {new Intl.NumberFormat(undefined, { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(item.price)}
                             </span>
                         </div>
                     );
