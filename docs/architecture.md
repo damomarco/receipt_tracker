@@ -1,4 +1,3 @@
-
 # Application Architecture
 
 This document provides a technical overview of the Travel Receipt Manager application's architecture.
@@ -31,7 +30,11 @@ The application is a client-side, single-page application (SPA) built with **Rea
     -   `ReceiptList.tsx`: Renders receipts in collapsible sections grouped by date.
     -   `ReceiptItem.tsx`: Manages its `isEditing` state. It now lazy-loads its corresponding image from IndexedDB for improved performance.
     -   `AddReceiptModal.tsx`: A complex modal for adding new receipts. It supports batch uploads, processes them in a queue, communicates with `geminiService`, and allows users to review/edit AI-extracted data.
-    -   `GlobalChatModal.tsx`, `ManageCategoriesModal.tsx`, `SpendingSummary.tsx`, `CategorySpendingChart.tsx`, `ImageModal.tsx`: Specialized UI components.
+    -   `GlobalChatModal.tsx`: Provides an AI-powered chat interface to ask questions about all receipts.
+    -   `ManageCategoriesModal.tsx`: Allows users to create, update, and delete their own custom spending categories.
+    -   `SpendingSummary.tsx`: Displays aggregate spending data, date filters, and the `CategorySpendingChart`. The entire component is collapsible to save vertical screen space.
+    -   `CategorySpendingChart.tsx`: A specialized component used within `SpendingSummary` to render the segmented bar chart.
+    -   `ImageModal.tsx`: A modal for displaying a full-screen, zoomable version of a receipt image.
     -   `icons.tsx`: A central repository for all SVG icons.
 
 ## State Management

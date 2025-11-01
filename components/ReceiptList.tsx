@@ -12,31 +12,49 @@ interface ReceiptListProps {
 export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) => {
   const { receipts } = useReceipts();
   
-  const groupedReceipts = receipts.reduce((acc, receipt) => {
+  const groupedByMonth = receipts.reduce((acc, receipt) => {
+    const month = receipt.date.substring(0, 7); // YYYY-MM
     const date = receipt.date;
-    if (!acc[date]) {
-      acc[date] = [];
+    if (!acc[month]) {
+      acc[month] = {};
     }
-    acc[date].push(receipt);
+    if (!acc[month][date]) {
+        acc[month][date] = [];
+    }
+    acc[month][date].push(receipt);
     return acc;
-  }, {} as Record<string, Receipt[]>);
+  }, {} as Record<string, Record<string, Receipt[]>>);
 
-  const sortedDates = Object.keys(groupedReceipts).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const sortedMonths = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
 
-  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => {
-    if (sortedDates.length > 0) {
-      // Expand the most recent date group by default
-      return { [sortedDates[0]]: true };
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>(() => {
+    if (sortedMonths.length > 0) {
+      // Expand the most recent month by default
+      return { [sortedMonths[0]]: true };
     }
     return {};
   });
 
-  const toggleDateExpansion = (date: string) => {
-    setExpandedDates(prev => ({
-      ...prev,
-      [date]: !prev[date],
-    }));
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>(() => {
+    if (sortedMonths.length > 0) {
+      const mostRecentMonth = sortedMonths[0];
+      const daysInMonth = Object.keys(groupedByMonth[mostRecentMonth]).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      if (daysInMonth.length > 0) {
+        // Expand the most recent day in the most recent month by default
+        return { [daysInMonth[0]]: true };
+      }
+    }
+    return {};
+  });
+
+  const toggleMonthExpansion = (month: string) => {
+    setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }));
   };
+
+  const toggleDayExpansion = (date: string) => {
+    setExpandedDays(prev => ({ ...prev, [date]: !prev[date] }));
+  };
+
 
   if (totalReceiptCount === 0) {
     return (
@@ -58,53 +76,99 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
 
 
   return (
-    <div className="space-y-4">
-      {sortedDates.map(date => {
-        const isExpanded = !!expandedDates[date];
-        const dateObj = new Date(date + 'T00:00:00'); // To avoid timezone issues
-        const formattedDate = dateObj.toLocaleDateString(undefined, {
-          weekday: 'long',
+    <div className="space-y-6">
+      {sortedMonths.map(month => {
+        const isMonthExpanded = !!expandedMonths[month];
+        const monthObj = new Date(month + '-02T00:00:00'); // Use day 2 to avoid timezone issues
+        const formattedMonth = monthObj.toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'long',
-          day: 'numeric',
         });
         
+        const daysInMonth = Object.keys(groupedByMonth[month]).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        const allReceiptsInMonth = daysInMonth.flatMap(date => groupedByMonth[month][date]);
+
         return (
-          <div key={date} className="bg-white dark:bg-gray-800/50 rounded-lg shadow-md transition-all duration-300">
+          <div key={month} className="bg-white dark:bg-gray-800/50 rounded-lg shadow-md transition-all duration-300">
             <div
               className="flex justify-between items-center p-4 md:p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
-              onClick={() => toggleDateExpansion(date)}
+              onClick={() => toggleMonthExpansion(month)}
               role="button"
-              aria-expanded={isExpanded}
-              aria-controls={`receipts-for-${date}`}
+              aria-expanded={isMonthExpanded}
+              aria-controls={`receipts-for-${month}`}
             >
               <div className="flex items-center space-x-3">
-                <CalendarIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{formattedDate}</h2>
+                <CalendarIcon className="w-7 h-7 text-gray-500 dark:text-gray-400" />
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{formattedMonth}</h2>
               </div>
               <div className="flex items-center space-x-4">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    exportToCSV(groupedReceipts[date], date);
+                    exportToCSV(allReceiptsInMonth, month);
                   }}
                   className="flex items-center space-x-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-3 rounded-md transition-colors"
-                  aria-label={`Export receipts for ${formattedDate} to CSV`}
+                  aria-label={`Export receipts for ${formattedMonth} to CSV`}
                 >
                   <DownloadIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Export</span>
+                  <span className="hidden sm:inline">Export Month</span>
                 </button>
-                <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`w-6 h-6 text-gray-500 dark:text-gray-400 transition-transform transform ${isMonthExpanded ? 'rotate-180' : ''}`} />
               </div>
             </div>
             
-            {isExpanded && (
-              <div id={`receipts-for-${date}`} className="px-4 md:px-6 pb-4 md:pb-6">
-                <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                  {groupedReceipts[date].map(receipt => (
-                    <ReceiptItem key={receipt.id} receipt={receipt} />
-                  ))}
-                </div>
+            {isMonthExpanded && (
+              <div id={`receipts-for-${month}`} className="px-4 md:px-6 pb-4 md:pb-6 space-y-4 border-t border-gray-200 dark:border-gray-700">
+                {daysInMonth.map(date => {
+                  const isDayExpanded = !!expandedDays[date];
+                  const dateObj = new Date(date + 'T00:00:00'); // To avoid timezone issues
+                  const formattedDate = dateObj.toLocaleDateString(undefined, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  });
+
+                  return (
+                    <div key={date} className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div
+                        className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg"
+                        onClick={() => toggleDayExpansion(date)}
+                        role="button"
+                        aria-expanded={isDayExpanded}
+                        aria-controls={`receipts-for-${date}`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{formattedDate}</h3>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              exportToCSV(groupedByMonth[month][date], date);
+                            }}
+                            className="flex items-center space-x-2 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold py-1 px-2 rounded-md transition-colors"
+                            aria-label={`Export receipts for ${formattedDate} to CSV`}
+                          >
+                            <DownloadIcon className="w-3 h-3" />
+                            <span className="hidden sm:inline">Export Day</span>
+                          </button>
+                          <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isDayExpanded ? 'rotate-180' : ''}`} />
+                        </div>
+                      </div>
+                      
+                      {isDayExpanded && (
+                        <div id={`receipts-for-${date}`} className="px-4 pb-4">
+                          <div className="space-y-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+                            {groupedByMonth[month][date].map(receipt => (
+                              <ReceiptItem key={receipt.id} receipt={receipt} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

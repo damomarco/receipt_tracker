@@ -1,4 +1,3 @@
-
 # Travel Receipt Manager
 
 A Progressive Web App (PWA) to capture, process, and organize cash receipt photos for your travels using AI-powered OCR and translation. It simplifies expense tracking with offline capabilities.
@@ -13,9 +12,9 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **Global AI Chat**: Ask questions about your entire collection of receipts. Get instant answers for things like total spending, most expensive items, or expenses by category.
 - **Custom Category Management**: Add, edit, and delete your own expense categories for personalized tracking.
 - **Advanced Spending Summary**: Visualize your spending with a consolidated, segmented bar chart that shows the percentage breakdown by category for each currency.
+- **Collapsible UI Elements**: Both the Spending Summary and the daily receipt lists are collapsible, allowing for a cleaner, more compact view of your data—especially on mobile devices.
 - **Full Offline Capability**: Add new receipts even without an internet connection. The app automatically syncs them once you're back online.
 - **Granular Data Editing**: Easily correct or update any information extracted by the AI, including the category, price, and description of each individual line item.
-- **Collapsible Day View**: Receipts are grouped by date in collapsible sections for a cleaner, more organized view.
 - **Fullscreen Image Viewer**: Tap any receipt thumbnail to view a high-resolution, zoomable image of the receipt.
 - **CSV Export**: Export receipts for any given day into a CSV file for easy reporting, now including detailed itemized data.
 - **Responsive Design**: A clean, mobile-first interface that works great on any device.
