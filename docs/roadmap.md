@@ -44,10 +44,11 @@ This document outlines the planned features and future direction for the Travel 
 ### Planned
 
 -   **Production Build Process**:
-    -   **Status**: Planned
-    -   **Description**: Remove the Tailwind CSS CDN script and integrate Tailwind into a proper PostCSS build process for better performance and production optimization. **Note**: Preparatory refactoring has been completed to remove dynamic class name generation, which is a major prerequisite for this task.
-    -   **Reward (Very High)**: A foundational step for a production-grade application. It will dramatically improve performance (faster load times), enhance the developer experience, and unlock further optimizations.
-    -   **Risk (Extremely High)**: **Update:** While initially assessed as low-risk, attempting this integration has revealed significant, unforeseen dependency conflicts and build-time errors. The complexity of the current environment makes this a high-risk change that is likely to break the application and has caused continuing stability issues. Proceeding requires a more in-depth architectural review.
+    -   **Status**: Architected & Ready for Implementation
+    -   **Description**: Migrate the application from its current CDN-based setup to a modern, production-grade foundation using **Vite**. This involves setting up a new project with a standard `npm`-based dependency management and build pipeline. This "lift and shift" approach will resolve current build-time issues, dramatically improve performance, and enable a superior developer experience with features like Hot Module Replacement (HMR).
+    -   **Reward (Very High)**: This is the most critical step for making the application scalable and maintainable. It unlocks future features like i18n and simplifies dependency management.
+    -   **Risk (Medium)**: The migration is a well-defined, mechanical process. The risk has been significantly reduced from "Extremely High" by adopting a proven strategy and avoiding an in-place refactor. A detailed implementation plan is now available.
+    -   **Implementation Guide**: For detailed steps, see the **[Development & Production Guide](./development-guide.md)**.
 
 ## Medium-Term Goals (3-6 Months)
 

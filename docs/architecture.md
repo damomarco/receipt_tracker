@@ -70,4 +70,7 @@ To ensure a smooth user experience, especially on mobile devices, several optimi
 
 -   **Google Gemini API**: Used for all AI-powered receipt processing, including OCR, translation, itemization, and categorization.
 -   **Frankfurter.app API**: A free, open-source API used to fetch historical daily exchange rates for the currency conversion feature.
--   **Styling**: Styling is handled by **Tailwind CSS** via the CDN. To ensure compatibility with a future production build process (which uses Ahead-of-Time compilation), the application avoids generating dynamic class names. A utility function (`utils/colors.ts`) maps category names to full, static class strings.
+
+## Styling
+
+The application uses **Tailwind CSS**. The current prototype architecture loads Tailwind via a CDN script. This approach will be replaced by a proper PostCSS build process as part of the migration to a Vite-based foundation. To ensure a smooth transition, the application already avoids generating dynamic class names; a utility function (`utils/colors.ts`) maps category names to full, static class strings.
