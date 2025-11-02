@@ -161,3 +161,10 @@ export const MapPinIcon: React.FC<IconProps> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
   </svg>
 );
+
+export const BriefcaseIcon: React.FC<IconProps> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.07a2.25 2.25 0 01-2.25 2.25H5.9a2.25 2.25 0 01-2.25-2.25v-4.07a2.25 2.25 0 01.99-1.898l7.5-4.5a2.25 2.25 0 012.52 0l7.5 4.5a2.25 2.25 0 01.99 1.898z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.75a2.25 2.25 0 002.25-2.25v-4.07a2.25 2.25 0 00-.99-1.898l-7.5-4.5a2.25 2.25 0 00-2.52 0l-7.5 4.5a2.25 2.25 0 00-.99 1.898v4.07a2.25 2.25 0 002.25 2.25H18z" />
+  </svg>
+);

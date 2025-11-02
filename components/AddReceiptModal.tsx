@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { processReceiptImage } from '../services/geminiService';
-import { ExtractedReceiptData, ReceiptItemData, Receipt } from '../types';
+import { ExtractedReceiptData, ReceiptItemData, Receipt, Trip } from '../types';
 import { PhotoIcon, XIcon, SpinnerIcon, TrashIcon, PlusCircleIcon, CameraIcon, CheckCircleIcon } from './icons';
 import { resizeImage } from '../utils/image';
+import { useTrips } from '../contexts/TripsContext';
 
 interface AddReceiptModalProps {
   onClose: () => void;
-  onAddReceipts: (receipts: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string }[]) => void;
+  onAddReceipts: (receipts: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string, tripId?: string }[]) => void;
   allCategories: string[];
+  onManageTrips: () => void;
 }
 
 type ProcessStatus = 'queued' | 'processing' | 'done' | 'error';
@@ -16,16 +18,18 @@ interface ProcessQueueItem {
     file: File;
     status: ProcessStatus;
     imageDataUrl: string;
+    tripId?: string;
     data?: ExtractedReceiptData;
     error?: string;
 }
 
-export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipts, allCategories }) => {
+export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAddReceipts, allCategories, onManageTrips }) => {
   const [queue, setQueue] = useState<ProcessQueueItem[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
+  const { trips } = useTrips();
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -57,8 +61,12 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
             // The image data URL is already a base64 string, so we just need the data part.
             const base64Image = itemToProcess.imageDataUrl.split(',')[1];
             const data = await processReceiptImage(base64Image, allCategories, userLocation);
+            
+            // Suggest a trip if the receipt date falls within a trip's date range
+            const suggestedTrip = trips.find(trip => data.date >= trip.startDate && data.date <= trip.endDate);
+
             setQueue(prev => prev.map((item, index) => 
-                index === nextItemIndex ? { ...item, status: 'done', data } : item
+                index === nextItemIndex ? { ...item, status: 'done', data, tripId: suggestedTrip?.id } : item
             ));
         } catch (e: any) {
             setQueue(prev => prev.map((item, index) => 
@@ -70,7 +78,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     };
     
     processNextInQueue();
-  }, [queue, allCategories, userLocation]);
+  }, [queue, allCategories, userLocation, trips]);
 
   const handleFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -100,6 +108,15 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }));
   };
   
+  const handleItemTripChange = (itemIndex: number, tripId: string) => {
+    setQueue(prev => prev.map((item, index) => {
+      if (index === itemIndex) {
+        return { ...item, tripId: tripId || undefined };
+      }
+      return item;
+    }));
+  };
+
   // FIX: Corrected the generic signature for handleNestedItemChange to properly type nested object updates.
   const handleNestedItemChange = <
     K extends 'merchant' | 'location'
@@ -147,7 +164,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     const receiptsToSave = queue
       .filter(item => item.status === 'done' && item.data)
       .map(item => {
-        const { data, imageDataUrl } = item;
+        const { data, imageDataUrl, tripId } = item;
         const receiptData: Omit<Receipt, 'id' | 'status'> = {
             merchant: data!.merchant,
             date: data!.date,
@@ -157,7 +174,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
             items: data!.items,
         };
         // The image is already resized, so we pass the smaller version.
-        return { receiptData, imageBase64: imageDataUrl };
+        return { receiptData, imageBase64: imageDataUrl, tripId };
       });
 
     if (receiptsToSave.length > 0) {
@@ -214,7 +231,7 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                             <button onClick={() => handleRemoveFromQueue(index)} className="p-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400" aria-label="Remove"><TrashIcon className="w-5 h-5"/></button>
                         </div>
                         {item.status === 'done' && item.data && (
-                            <details className="mt-4">
+                            <details className="mt-4" open>
                                 <summary className="cursor-pointer text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Review & Edit</summary>
                                 <div className="mt-4 space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -226,7 +243,38 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
                                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Date</label>
                                             <input type="date" value={item.data.date} max={today} onChange={(e) => handleItemChange(index, 'date', e.target.value)} className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                                         </div>
-                                        {/* Simplified editing for batch mode, more can be added */}
+                                        <div className="md:col-span-2">
+                                          {trips.length > 0 ? (
+                                              <>
+                                                  <div className="flex justify-between items-center mb-1">
+                                                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Assign to Trip</label>
+                                                      <button onClick={onManageTrips} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                                        + New / Manage
+                                                      </button>
+                                                  </div>
+                                                  <select
+                                                    value={item.tripId || ''}
+                                                    onChange={(e) => handleItemTripChange(index, e.target.value)}
+                                                    className="block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                  >
+                                                    <option value="">Unassigned</option>
+                                                    {trips.map(trip => (
+                                                      <option key={trip.id} value={trip.id}>{trip.name}</option>
+                                                    ))}
+                                                  </select>
+                                              </>
+                                          ) : (
+                                              <div className="p-3 text-center bg-blue-50 dark:bg-blue-900/50 rounded-md">
+                                                  <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">No trips found. Create one to organize this receipt.</p>
+                                                  <button
+                                                      onClick={onManageTrips}
+                                                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm text-sm transition"
+                                                  >
+                                                      Create New Trip
+                                                  </button>
+                                              </div>
+                                          )}
+                                        </div>
                                     </div>
                                 </div>
                             </details>

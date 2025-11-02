@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AddReceiptModal } from './components/AddReceiptModal';
 import { Header } from './components/Header';
@@ -6,19 +5,25 @@ import { ReceiptList } from './components/ReceiptList';
 import { PlusIcon, ChatBubbleIcon } from './components/icons';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { Receipt, DEFAULT_CATEGORIES } from './types';
+import { Receipt, DEFAULT_CATEGORIES, Trip } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
 import { SpendingSummary } from './components/SpendingSummary';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
+import { ManageTripsModal } from './components/ManageTripsModal';
 import { ReceiptsProvider } from './contexts/ReceiptsContext';
 import { saveImage, deleteImage } from './services/imageStore';
+import { TripsProvider } from './contexts/TripsContext';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+  const [isTripsModalOpen, setIsTripsModalOpen] = useState(false);
+
   const [receipts, setReceipts] = useLocalStorage<Receipt[]>('receipts', []);
   const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
+  const [trips, setTrips] = useLocalStorage<Trip[]>('trips', []);
+  
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const isOnline = useOnlineStatus();
   const prevReceiptsCount = useRef(receipts.length);
@@ -62,34 +67,16 @@ function App() {
       }
     }
   }, [isOnline, receipts, setReceipts]);
-
-  const addReceipt = async (newReceiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string) => {
-    const newReceipt: Receipt = {
-      id: new Date().toISOString() + Math.random(), // Add random number to ensure unique ID
-      ...newReceiptData,
-      items: newReceiptData.items || [], // Ensure items is always an array
-      status: isOnline ? 'synced' : 'pending',
-    };
-    
-    try {
-      // Save the large image data to IndexedDB first
-      await saveImage(newReceipt.id, imageBase64);
-      // Then, save the smaller receipt metadata to localStorage
-      setReceipts(prevReceipts => [...prevReceipts, newReceipt].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    } catch (error) {
-        console.error("Failed to save receipt image:", error);
-        // Handle the error, maybe show a notification to the user
-    }
-  };
   
-  const addMultipleReceipts = async (receiptsToAdd: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string }[]) => {
+  const addMultipleReceipts = async (receiptsToAdd: { receiptData: Omit<Receipt, 'id' | 'status'>, imageBase64: string, tripId?: string }[]) => {
     const newReceipts: Receipt[] = [];
-    for (const { receiptData, imageBase64 } of receiptsToAdd) {
+    for (const { receiptData, imageBase64, tripId } of receiptsToAdd) {
         const newReceipt: Receipt = {
             id: new Date().toISOString() + Math.random(),
             ...receiptData,
             items: receiptData.items || [],
             status: isOnline ? 'synced' : 'pending',
+            tripId: tripId || undefined,
         };
         try {
             await saveImage(newReceipt.id, imageBase64);
@@ -161,6 +148,29 @@ function App() {
       }))
     );
   };
+  
+  // Trip Management
+  const addTrip = (tripData: Omit<Trip, 'id'>) => {
+    const newTrip: Trip = {
+      id: new Date().toISOString() + Math.random(),
+      ...tripData,
+    };
+    setTrips(prev => [...prev, newTrip].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()));
+  };
+
+  const updateTrip = (updatedTrip: Trip) => {
+    setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+  };
+
+  const deleteTrip = (id: string) => {
+    // First, un-assign this trip from all receipts
+    setReceipts(prevReceipts => 
+      prevReceipts.map(r => r.tripId === id ? { ...r, tripId: undefined } : r)
+    );
+    // Then, delete the trip itself
+    setTrips(prev => prev.filter(t => t.id !== id));
+  };
+
 
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
@@ -184,61 +194,78 @@ function App() {
     allCategories,
   };
 
+  const tripsContextValue = {
+    trips: trips.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()),
+  };
+
   return (
     <ReceiptsProvider value={receiptsContextValue}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
-        <Header 
-          isOnline={isOnline} 
-          pendingCount={pendingCount} 
-          syncingCount={syncingCount}
-          onManageCategories={() => setIsCategoriesModalOpen(true)}
-        />
-        <main className="flex-grow container mx-auto p-4 md:p-6">
-          <SpendingSummary dateFilter={dateFilter} setDateFilter={setDateFilter} />
-          <ReceiptList totalReceiptCount={receipts.length} />
-        </main>
-        
-        <button
-          onClick={() => setIsChatModalOpen(true)}
-          className="fixed bottom-6 left-6 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 z-50"
-          aria-label="Ask about all receipts"
-        >
-          <ChatBubbleIcon className="w-8 h-8" />
-        </button>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 z-50"
-          aria-label="Add new receipt"
-        >
-          <PlusIcon className="w-8 h-8" />
-        </button>
-
-        {isModalOpen && (
-          <AddReceiptModal
-            onClose={() => setIsModalOpen(false)}
-            onAddReceipts={addMultipleReceipts}
-            allCategories={allCategories}
+      <TripsProvider value={tripsContextValue}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+          <Header 
+            isOnline={isOnline} 
+            pendingCount={pendingCount} 
+            syncingCount={syncingCount}
+            onManageCategories={() => setIsCategoriesModalOpen(true)}
+            onManageTrips={() => setIsTripsModalOpen(true)}
           />
-        )}
+          <main className="flex-grow container mx-auto p-4 md:p-6">
+            <SpendingSummary dateFilter={dateFilter} setDateFilter={setDateFilter} />
+            <ReceiptList totalReceiptCount={receipts.length} />
+          </main>
+          
+          <button
+            onClick={() => setIsChatModalOpen(true)}
+            className="fixed bottom-6 left-6 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 z-50"
+            aria-label="Ask about all receipts"
+          >
+            <ChatBubbleIcon className="w-8 h-8" />
+          </button>
 
-        {isChatModalOpen && (
-          <GlobalChatModal
-            onClose={() => setIsChatModalOpen(false)}
-          />
-        )}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 z-50"
+            aria-label="Add new receipt"
+          >
+            <PlusIcon className="w-8 h-8" />
+          </button>
 
-        {isCategoriesModalOpen && (
-          <ManageCategoriesModal
-            onClose={() => setIsCategoriesModalOpen(false)}
-            defaultCategories={DEFAULT_CATEGORIES}
-            customCategories={customCategories}
-            onAddCategory={addCustomCategory}
-            onUpdateCategory={updateCustomCategory}
-            onDeleteCategory={deleteCustomCategory}
-          />
-        )}
-      </div>
+          {isModalOpen && (
+            <AddReceiptModal
+              onClose={() => setIsModalOpen(false)}
+              onAddReceipts={addMultipleReceipts}
+              allCategories={allCategories}
+              onManageTrips={() => setIsTripsModalOpen(true)}
+            />
+          )}
+
+          {isChatModalOpen && (
+            <GlobalChatModal
+              onClose={() => setIsChatModalOpen(false)}
+            />
+          )}
+
+          {isCategoriesModalOpen && (
+            <ManageCategoriesModal
+              onClose={() => setIsCategoriesModalOpen(false)}
+              defaultCategories={DEFAULT_CATEGORIES}
+              customCategories={customCategories}
+              onAddCategory={addCustomCategory}
+              onUpdateCategory={updateCustomCategory}
+              onDeleteCategory={deleteCustomCategory}
+            />
+          )}
+
+          {isTripsModalOpen && (
+            <ManageTripsModal
+              onClose={() => setIsTripsModalOpen(false)}
+              onAddTrip={addTrip}
+              onUpdateTrip={updateTrip}
+              onDeleteTrip={deleteTrip}
+            />
+          )}
+        </div>
+      </TripsProvider>
     </ReceiptsProvider>
   );
 }

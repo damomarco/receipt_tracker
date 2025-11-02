@@ -51,6 +51,14 @@ export interface Receipt {
   currency: string;
   items: ReceiptItemData[];
   status: 'pending' | 'syncing' | 'synced';
+  tripId?: string;
+}
+
+export interface Trip {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface ExtractedReceiptData {

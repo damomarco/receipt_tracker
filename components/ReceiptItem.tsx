@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt, ReceiptItemData } from '../types';
 import { useReceipts } from '../contexts/ReceiptsContext';
+import { useTrips } from '../contexts/TripsContext';
 import { TrashIcon, EditIcon, SaveIcon, CancelIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, PlusCircleIcon, MapPinIcon } from './icons';
 import { ImageModal } from './ImageModal';
 import { getCategoryStyling } from '../utils/colors';
@@ -64,6 +65,7 @@ const ConvertedAmount: React.FC<{ receipt: Receipt }> = ({ receipt }) => {
 
 export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
   const { deleteReceipt, updateReceipt, allCategories } = useReceipts();
+  const { trips } = useTrips();
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -139,6 +141,8 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const assignedTripName = trips.find(t => t.id === receipt.tripId)?.name;
+
 
   if (isEditing) {
     return (
@@ -161,7 +165,20 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
               <input type="text" value={editedReceipt.currency} onChange={e => handleFormChange('currency', e.target.value)} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
-            <div className="sm:col-span-2">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Trip</label>
+              <select
+                value={editedReceipt.tripId || ''}
+                onChange={e => handleFormChange('tripId', e.target.value || undefined)}
+                className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">Unassigned</option>
+                {trips.map(trip => (
+                  <option key={trip.id} value={trip.id}>{trip.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Total</label>
               <input type="number" step="0.01" readOnly value={editedReceipt.total} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-white cursor-not-allowed" />
             </div>
@@ -224,6 +241,11 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
                     <MapPinIcon className="w-4 h-4 mr-1.5 flex-shrink-0" />
                     <span>{receipt.location}</span>
                 </div>
+              )}
+              {assignedTripName && (
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded-full inline-block mt-1.5">
+                    {assignedTripName}
+                  </p>
               )}
               <p className="text-2xl font-light text-gray-800 dark:text-gray-200 mt-1">
                 {new Intl.NumberFormat(undefined, { style: 'currency', currency: receipt.currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(receipt.total)}

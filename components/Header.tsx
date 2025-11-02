@@ -1,6 +1,7 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon } from './icons';
+import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon, BriefcaseIcon } from './icons';
 import { useTheme } from '../hooks/useTheme';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { SUPPORTED_CURRENCIES, SupportedCurrencyCode } from '../types';
@@ -10,9 +11,10 @@ interface HeaderProps {
   pendingCount: number;
   syncingCount: number;
   onManageCategories: () => void;
+  onManageTrips: () => void;
 }
 
-const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories'>> = ({ pendingCount, syncingCount }) => {
+const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' | 'onManageTrips'>> = ({ pendingCount, syncingCount }) => {
   if (syncingCount > 0) {
     return (
       <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-full">
@@ -39,7 +41,7 @@ const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories'>>
   );
 };
 
-export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories }) => {
+export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories, onManageTrips }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { homeCurrency, setHomeCurrency, ratesLastUpdated } = useCurrency();
@@ -118,12 +120,23 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
               </button>
               {isSettingsOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                  className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
                   role="menu"
                   aria-orientation="vertical"
                 >
                   <div className="py-1" role="none">
                     <div className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Settings</div>
+                    <button
+                      onClick={() => {
+                        onManageTrips();
+                        setIsSettingsOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      role="menuitem"
+                    >
+                      <BriefcaseIcon className="w-5 h-5 mr-3" />
+                      Manage Trips
+                    </button>
                     <button
                       onClick={() => {
                         onManageCategories();
