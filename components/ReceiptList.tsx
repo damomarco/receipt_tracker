@@ -6,6 +6,7 @@ import { exportToCSV } from '../utils/csv';
 import { useReceipts } from '../contexts/ReceiptsContext';
 import { useTrips } from '../contexts/TripsContext';
 import { TripSpendingSummary } from './TripSpendingSummary';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface ReceiptListProps {
   totalReceiptCount: number;
@@ -23,6 +24,7 @@ interface GroupedByTrip {
 export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) => {
   const { receipts } = useReceipts();
   const { trips } = useTrips();
+  const { formatDate } = useCurrency();
   
   const groupedData = useMemo(() => {
     const receiptsToGroup = receipts;
@@ -125,7 +127,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{tripDetails.name}</h2>
                     {'startDate' in tripDetails && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{tripDetails.startDate} to {tripDetails.endDate}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(tripDetails.startDate)} to {formatDate(tripDetails.endDate)}</p>
                     )}
                 </div>
               </div>
@@ -160,8 +162,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
                   >
                     {daysInGroup.map(date => {
                       const isDayExpanded = !!expandedDays[date];
-                      const dateObj = new Date(date + 'T00:00:00'); // To avoid timezone issues
-                      const formattedDate = dateObj.toLocaleDateString(undefined, {
+                      const formattedDate = formatDate(date, {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',

@@ -6,13 +6,17 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Recently Completed
 
+-   **Trip Management & Filtering**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented a core trip management system. Users can create, update, and delete trips. The main UI is now trip-centric, allowing users to filter their receipts by a selected trip for a more focused view.
+
+-   **Trip-Specific Spending Summary**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Replaced the global dashboard with a more contextual "Trip Summary." This summary, which includes total spending and a category breakdown chart, is now embedded directly within each trip's collapsible view in the main list.
+
 -   **Improved Currency Conversion**:
     -   **Status**: ✅ **Done**
     -   **Description**: Integrated the Frankfurter.app API to fetch historical exchange rates. Users can now set a "home currency" and see a grand total converted to that currency, with rates cached for offline use. The correct rate for the date of each receipt is used.
-
--   **Monthly Grouping**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: Implemented monthly collapsible sections in the main receipt list to better organize receipts from longer trips. Each month contains the existing collapsible daily lists.
 
 -   **Migrate Image Storage to IndexedDB**:
     -   **Status**: ✅ **Done**
@@ -33,25 +37,12 @@ This document outlines the planned features and future direction for the Travel 
 -   **Expense Categorization**:
     -   **Status**: ✅ **Done**
     -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
--   **Enhanced Reporting Dashboard**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: Implemented a "Spending Summary" view that shows total expenses and a segmented bar chart that visualizes spending by category.
-
--   **Enhanced Reporting Filtering**:
-    -   **Status**: ✅ **Done**
-    -   **Description**: Integrated date-range filters into the "Spending Summary" section. Users can now select start and end dates to filter the summary stats and category charts, allowing for analysis of specific trips or time periods.
 
 ### Planned
 
--   **Trip Management**:
-    -   **Status**: **Next Up**
-    -   **Description**: Allow users to group receipts into distinct "trips," each with its own name and date range. This will be implemented on the current local-first architecture and will define the data model for the future cloud sync feature.
-    -   **Reward (High)**: A powerful organizational feature that aligns perfectly with the app's purpose. It allows for trip-specific budgeting and is a major value-add for users.
-    -   **Risk (Medium)**: Requires data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips.
-
 -   **Advanced Search and Filtering**:
-    -   **Status**: Planned
-    -   **Description**: Implement a global search bar and add filtering options to the main receipt list.
+    -   **Status**: **Next Up**
+    -   **Description**: Implement a global search bar and add filtering options to the main receipt list (e.g., filter by category, merchant name).
     -   **Reward (Medium)**: Improves usability significantly as the number of receipts grows, allowing users to find information quickly.
     -   **Risk (Low)**: For client-side search, this is a low-risk feature. The logic involves filtering the existing `receipts` array.
 
@@ -65,7 +56,7 @@ This document outlines the planned features and future direction for the Travel 
 
 -   **Cloud Sync & Collaboration (via BaaS)**:
     -   **Status**: **High Priority**
-    -   **Description**: Integrate a Backend-as-a-Service (BaaS) to enable real-time data synchronization between multiple devices and users (e.g., a receipt collector and a finance manager). This feature will introduce user authentication and will become the primary mechanism for automatic cloud backup. This is the next major architectural evolution after Trip Management is complete.
+    -   **Description**: Integrate a Backend-as-a-Service (BaaS) to enable real-time data synchronization between multiple devices and users (e.g., a receipt collector and a finance manager). This feature will introduce user authentication and will become the primary mechanism for automatic cloud backup. This is the next major architectural evolution.
     -   **Reward (Critical)**: Transforms the app from a personal utility into a collaborative tool, enabling powerful new use cases and ensuring data safety.
     -   **Risk (High)**: A significant architectural change that requires careful implementation of authentication, data migration for existing users, and refactoring of data access logic.
 

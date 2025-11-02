@@ -25,26 +25,29 @@ The application is a client-side, single-page application (SPA) built with **Rea
 
 ## Component Breakdown
 
--   **`App.tsx`**: The root component. It manages the top-level application state (receipts, custom categories) and modal visibility. It orchestrates the offline/online synchronization logic and wraps the application in the necessary Context Providers.
+-   **`App.tsx`**: The root component. It manages the top-level application state (receipts, trips, custom categories) and modal visibility. It orchestrates the offline/online synchronization logic and wraps the application in the necessary Context Providers.
 -   **`components/`**:
-    -   `Header.tsx`: Displays the application title, sync status, and a settings menu that now includes a "Home Currency" selector.
-    -   `ReceiptList.tsx`: Renders receipts in collapsible sections grouped first by month, then by day.
+    -   `Header.tsx`: Displays the application title, sync status, and a settings menu. Now also shows the name of the currently selected trip.
+    -   `ReceiptList.tsx`: Renders receipts in collapsible sections grouped by trip, then by day. It now embeds the `TripSpendingSummary` component within each trip's view.
     -   `ReceiptItem.tsx`: Displays a single receipt. Manages its `isEditing` state, lazy-loads its image from IndexedDB, and shows a converted total in the user's home currency.
     -   `AddReceiptModal.tsx`: A complex modal for adding new receipts. It supports batch uploads, performs client-side image resizing, processes them in a queue, communicates with `geminiService`, and allows users to review/edit AI-extracted data.
     -   `GlobalChatModal.tsx`: Provides an AI-powered chat interface to ask questions about all receipts.
     -   `ManageCategoriesModal.tsx`: Allows users to create, update, and delete their own custom spending categories.
-    -   `SpendingSummary.tsx`: Displays aggregate spending data, date filters, a grand total converted to the home currency, and the `CategorySpendingChart`.
-    -   `CategorySpendingChart.tsx`: A specialized component used within `SpendingSummary` to render the segmented bar chart.
+    -   `ManageTripsModal.tsx`: A modal for creating, updating, and deleting trips.
+    -   `TripFilter.tsx`: A dropdown component allowing users to filter the main receipt list by a specific trip or view all receipts.
+    -   `TripSpendingSummary.tsx`: Displays aggregate spending data (totals, category chart) for a specific set of receipts belonging to a single trip. Embedded within the `ReceiptList`.
+    -   `CategorySpendingChart.tsx`: A specialized component used within `TripSpendingSummary` to render the segmented bar chart.
     -   `ImageModal.tsx`: A modal for displaying a full-screen, zoomable version of a receipt image.
     -   `icons.tsx`: A central repository for all SVG icons.
 -   **`contexts/`**:
     -   `ReceiptsContext.tsx`: Provides global access to `receipts` data and core functions (`deleteReceipt`, `updateReceipt`).
+    -   `TripsContext.tsx`: Provides global access to the list of all `trips`.
     -   `ThemeContext.tsx`: Manages the application's light/dark/system theme.
     -   `CurrencyContext.tsx`: Manages home currency settings, fetches and caches exchange rates, and provides conversion logic to the app.
 
 ## State Management
 
--   **React Context API**: Provides global access to shared state like receipts, theme, and currency settings, avoiding "prop drilling".
+-   **React Context API**: Provides global access to shared state like receipts, trips, theme, and currency settings, avoiding "prop drilling".
 -   **`useLocalStorage` Hook**: Persists small, critical data (receipts array, custom categories, settings, rate cache) across sessions.
 -   **Component State (`useState`)**: Used for local UI concerns like modal visibility and edit modes.
 
@@ -64,7 +67,7 @@ The application uses a robust, multi-layered storage strategy to ensure full off
 To ensure a smooth user experience, especially on mobile devices, several optimizations have been implemented:
 
 -   **Client-Side Image Resizing**: Before being uploaded to the Gemini API, all receipt images are resized on the client's device using the `utils/image.ts` module. Images are scaled down to a maximum dimension of 1024px, which drastically reduces file size. This results in faster upload times, quicker AI processing, and reduced mobile data consumption.
--   **UI Memoization**: In components that render lists of data, like `ReceiptList.tsx`, expensive computations (such as grouping all receipts by month and day) are wrapped in `React.useMemo` hooks. This ensures these calculations only re-run when the underlying data changes, not on every render, keeping the UI snappy and responsive even with hundreds of receipts.
+-   **UI Memoization**: In components that render lists of data, like `ReceiptList.tsx`, expensive computations (such as grouping all receipts by trip and day) are wrapped in `React.useMemo` hooks. This ensures these calculations only re-run when the underlying data changes, not on every render, keeping the UI snappy and responsive even with hundreds of receipts.
 
 ## External Services
 

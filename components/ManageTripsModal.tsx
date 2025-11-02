@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { XIcon, EditIcon, TrashIcon, SaveIcon, CancelIcon, BriefcaseIcon } from './icons';
 import { Trip } from '../types';
 import { useTrips } from '../contexts/TripsContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface ManageTripsModalProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ export const ManageTripsModal: React.FC<ManageTripsModalProps> = ({
   onDeleteTrip,
 }) => {
   const { trips } = useTrips();
+  const { formatDate } = useCurrency();
   const [newTrip, setNewTrip] = useState({ name: '', startDate: '', endDate: '' });
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export const ManageTripsModal: React.FC<ManageTripsModalProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{trip.startDate} to {trip.endDate}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(trip.startDate)} to {formatDate(trip.endDate)}</p>
                         </div>
                         <div className="flex items-center">
                             <button onClick={() => handleStartEdit(trip)} className="p-1 text-blue-600 hover:text-blue-800" aria-label="Edit"><EditIcon className="w-5 h-5"/></button>
