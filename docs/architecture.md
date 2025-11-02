@@ -73,4 +73,4 @@ To ensure a smooth user experience, especially on mobile devices, several optimi
 
 ## Styling
 
-The application uses **Tailwind CSS**. The current prototype architecture loads Tailwind via a CDN script. This approach will be replaced by a proper PostCSS build process as part of the migration to a Vite-based foundation. To ensure a smooth transition, the application already avoids generating dynamic class names; a utility function (`utils/colors.ts`) maps category names to full, static class strings.
+The application uses **Tailwind CSS**, loaded directly via a CDN script in `index.html`. This serverless, build-free approach is a core part of the architecture, enabling rapid prototyping and deployment within the AI Studio environment. To ensure Tailwind can find all necessary classes without a build-time JIT compiler, the application avoids generating dynamic class names at runtime; a utility function (`utils/colors.ts`) maps category names to full, static class strings.

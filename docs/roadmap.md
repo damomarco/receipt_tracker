@@ -43,30 +43,38 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Planned
 
--   **Production Build Process**:
-    -   **Status**: Architected & Ready for Implementation
-    -   **Description**: Migrate the application from its current CDN-based setup to a modern, production-grade foundation using **Vite**. This involves setting up a new project with a standard `npm`-based dependency management and build pipeline. This "lift and shift" approach will resolve current build-time issues, dramatically improve performance, and enable a superior developer experience with features like Hot Module Replacement (HMR).
-    -   **Reward (Very High)**: This is the most critical step for making the application scalable and maintainable. It unlocks future features like i18n and simplifies dependency management.
-    -   **Risk (Medium)**: The migration is a well-defined, mechanical process. The risk has been significantly reduced from "Extremely High" by adopting a proven strategy and avoiding an in-place refactor. A detailed implementation plan is now available.
-    -   **Implementation Guide**: For detailed steps, see the **[Development & Production Guide](./development-guide.md)**.
-
-## Medium-Term Goals (3-6 Months)
-
--   **Cloud Backup & Multi-Device Sync**:
-    -   **Description**: Move beyond local-only storage to a cloud-based solution (e.g., Firebase Firestore & Cloud Storage) and implement user authentication.
-    -   **Migration Path**: The current architecture using `services/imageStore.ts` as an abstraction for IndexedDB is a perfect stepping stone. Migration would involve changing the implementation of `saveImage`, `getImage`, etc., to interact with a cloud storage bucket instead of the local DB, leaving the rest of the application logic largely untouched.
-    -   **Reward (Critical)**: Prevents data loss if a device is lost/broken and enables a seamless multi-device experience. This is a prerequisite for long-term user retention.
-    -   **Risk (High)**: A significant architectural change. It introduces a backend, authentication, security rules, and complex data synchronization logic (handling offline edits, merge conflicts, etc.).
+-   **Trip Management**:
+    -   **Status**: Planned
+    -   **Description**: Allow users to group receipts into distinct "trips," each with its own name, date range, and reporting.
+    -   **Reward (High)**: A powerful organizational feature that aligns perfectly with the app's purpose. It allows for trip-specific budgeting and is a major value-add for users.
+    -   **Risk (Medium)**: Requires data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips. Care must be taken to migrate existing data for current users.
 
 -   **Advanced Search and Filtering**:
+    -   **Status**: Planned
     -   **Description**: Implement a global search bar and add filtering options to the main receipt list.
     -   **Reward (Medium)**: Improves usability significantly as the number of receipts grows, allowing users to find information quickly.
     -   **Risk (Low)**: For client-side search, this is a low-risk feature. The logic involves filtering the existing `receipts` array.
 
--   **Trip Management**:
-    -   **Description**: Allow users to group receipts into distinct "trips," each with its own name, date range, and reporting.
-    -   **Reward (High)**: A powerful organizational feature that aligns perfectly with the app's purpose. It allows for trip-specific budgeting and is a major value-add for users.
-    -   **Risk (Medium)**: Requires significant data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips. Care must be taken to migrate existing data for current users.
+-   **Manual Data Backup (Import/Export)**:
+    -   **Status**: Planned
+    -   **Description**: Implement JSON export/import for all user data (receipts, categories). This gives users a manual way to back up their data and migrate it between devices.
+    -   **Reward (High)**: Critically important for a local-only application. It mitigates the risk of data loss and serves as the primary backup mechanism.
+    -   **Risk (Low)**: A straightforward feature to implement using standard browser APIs.
+
+## Medium-Term Goals (3-6 Months)
+
+-   **AI-Driven Budgeting Insights**:
+    -   **Description**: Create a new "Insights" section where users can ask the Gemini API to analyze spending patterns for a trip or date range and provide helpful summaries or identify anomalies.
+    -   **Reward (High)**: Moves the app from a passive data store to a proactive financial assistant, providing unique value.
+    -   **Risk (Low)**: A natural extension of the existing "Global Chat" functionality.
+
+-   **AI Confidence Scores**:
+    -   **Description**: Ask the AI model for a confidence score for each extracted field (e.g., merchant, total) and display it in the UI, highlighting fields that may need user review.
+    -   **Reward (Medium)**: Builds user trust in the AI by being transparent about its certainty. Helps guide the user's attention, speeding up the verification process.
+    -   **Risk (Low)**: Dependent on the AI model being able to provide this information. If available, the implementation is a relatively simple UI change.
+
+-   **Cloud Backup & Multi-Device Sync**:
+    -   **Description**: *This feature is currently de-prioritized.* Due to the security and complexity challenges of implementing a backend within the current CDN-based platform, this is a high-risk endeavor. The short-term focus is on providing a robust manual data backup feature via JSON import/export, which serves as a safer, more practical alternative for users.
 
 ## Long-Term Goals (6+ Months)
 
@@ -79,8 +87,3 @@ This document outlines the planned features and future direction for the Travel 
     -   **Description**: Provide options to export data in formats compatible with popular budgeting applications (e.g., YNAB, Mint).
     -   **Reward (Medium)**: Increases the app's value by making it part of a user's broader financial ecosystem. Caters to power users.
     -   **Risk (Low)**: This is primarily an extension of the existing CSV export functionality. The main work is researching the specific formats required by other apps.
-
--   **AI Confidence Scores**:
-    -   **Description**: Ask the AI for a confidence score for each extracted field and display it in the UI.
-    -   **Reward (Medium)**: Builds user trust in the AI by being transparent about its certainty. Helps guide the user's attention to fields that most likely need review, speeding up the verification process.
-    -   **Risk (Low)**: This is dependent on the AI model being able to provide this information. If it can, the implementation is a relatively simple UI change.

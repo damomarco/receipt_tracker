@@ -1,9 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon } from './icons';
 import { useTheme } from '../hooks/useTheme';
 import { useCurrency } from '../contexts/CurrencyContext';
-import { currencies } from '../config/currencies';
-import { SupportedCurrencyCode } from '../types';
+import { SUPPORTED_CURRENCIES, SupportedCurrencyCode } from '../types';
 
 interface HeaderProps {
   isOnline: boolean;
@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-gray-50 dark:bg-gray-700"
                       >
                         <option value="none">None</option>
-                        {currencies.map(c => <option key={c.code} value={c.code}>{c.code} - {c.name}</option>)}
+                        {SUPPORTED_CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code} - {c.name}</option>)}
                       </select>
                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
                         Rates last updated: {timeAgo(ratesLastUpdated)}

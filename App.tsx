@@ -49,30 +49,6 @@ function App() {
   }, [receipts]);
 
   useEffect(() => {
-    // One-time data migration for item-level categories
-    setReceipts(prevReceipts => {
-        let hasChanged = false;
-        const migratedReceipts = prevReceipts.map(r => {
-            // Check if the receipt has the old structure (top-level category)
-            // and items that don't have categories yet.
-            if ((r as any).category && r.items && r.items.every(item => !(item as any).category)) {
-                hasChanged = true;
-                const newItems = r.items.map(item => ({
-                    ...item,
-                    category: (r as any).category, // Assign parent category to each item
-                }));
-                const newReceipt = { ...r, items: newItems };
-                delete (newReceipt as any).category; // Remove old top-level category
-                return newReceipt;
-            }
-            return r;
-        });
-        return hasChanged ? migratedReceipts : prevReceipts;
-    });
-  }, [setReceipts]);
-
-
-  useEffect(() => {
     if (isOnline) {
       const pendingReceipts = receipts.filter(r => r.status === 'pending');
       if (pendingReceipts.length > 0) {

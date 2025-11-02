@@ -1,5 +1,2 @@
-import { SUPPORTED_CURRENCIES } from "../types";
-
-// This file simply re-exports the constant from types.ts to be used in components
-// without creating circular dependencies.
-export const currencies = SUPPORTED_CURRENCIES;
+// This file is deprecated and can be removed.
+// The SUPPORTED_CURRENCIES constant should be imported directly from types.ts.
