@@ -6,14 +6,14 @@ interface FilterModalProps {
   onClose: () => void;
   onApplyFilters: (filters: Filters) => void;
   currentFilters: Filters;
-  allCategories: string[];
+  availableCategories: string[];
 }
 
 export const FilterModal: React.FC<FilterModalProps> = ({
   onClose,
   onApplyFilters,
   currentFilters,
-  allCategories,
+  availableCategories,
 }) => {
   const [filters, setFilters] = useState<Filters>(currentFilters);
 
@@ -96,18 +96,22 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           <fieldset>
             <legend className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Categories</legend>
             <div className="mt-2 max-h-48 overflow-y-auto space-y-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-              {allCategories.map(category => (
-                <div key={category} className="flex items-center">
-                  <input
-                    id={`category-${category}`}
-                    type="checkbox"
-                    checked={filters.categories.includes(category)}
-                    onChange={() => handleCategoryChange(category)}
-                    className="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-500 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor={`category-${category}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">{category}</label>
-                </div>
-              ))}
+              {availableCategories.length > 0 ? (
+                availableCategories.map(category => (
+                  <div key={category} className="flex items-center">
+                    <input
+                      id={`category-${category}`}
+                      type="checkbox"
+                      checked={filters.categories.includes(category)}
+                      onChange={() => handleCategoryChange(category)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-500 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={`category-${category}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">{category}</label>
+                  </div>
+                ))
+              ) : (
+                 <p className="text-sm text-center text-gray-500 dark:text-gray-400 py-4">No categories have been used yet.</p>
+              )}
             </div>
           </fieldset>
         </div>

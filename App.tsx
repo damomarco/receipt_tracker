@@ -189,6 +189,18 @@ function App() {
   const selectedTripName = useMemo(() => {
     return trips.find(t => t.id === selectedTripId)?.name || null;
   }, [selectedTripId, trips]);
+
+  const categoriesInUse = useMemo(() => {
+    const usedCategories = new Set<string>();
+    receipts.forEach(receipt => {
+      if (receipt.items) {
+        receipt.items.forEach(item => {
+          usedCategories.add(item.category);
+        });
+      }
+    });
+    return Array.from(usedCategories).sort();
+  }, [receipts]);
   
   const clearAllFilters = () => {
     setFilters(initialFilters);
@@ -320,7 +332,7 @@ function App() {
               onClose={() => setIsFilterModalOpen(false)}
               onApplyFilters={setFilters}
               currentFilters={filters}
-              allCategories={allCategories}
+              availableCategories={categoriesInUse}
             />
           )}
         </div>

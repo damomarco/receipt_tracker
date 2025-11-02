@@ -8,7 +8,7 @@ This document outlines the planned features and future direction for the Travel 
 
 -   **Advanced Search and Filtering**:
     -   **Status**: ✅ **Done**
-    -   **Description**: Implemented a comprehensive search and filter system. Includes a real-time search bar for merchants and items, an advanced filter modal (date range, categories, amount), a dedicated flat-list view for search results, and highlighting of matched terms within receipts.
+    -   **Description**: Implemented a comprehensive search and filter system. Includes a real-time search bar for merchants and items, a dynamic advanced filter modal (date range, amount, and context-aware categories that only show options currently in use), a dedicated flat-list view for search results, and highlighting of matched terms within receipts.
 
 -   **Trip Management & Filtering**:
     -   **Status**: ✅ **Done**
