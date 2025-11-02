@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon, BriefcaseIcon } from './icons';
 import { useTheme } from '../hooks/useTheme';
@@ -12,9 +10,10 @@ interface HeaderProps {
   syncingCount: number;
   onManageCategories: () => void;
   onManageTrips: () => void;
+  selectedTripName: string | null;
 }
 
-const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' | 'onManageTrips'>> = ({ pendingCount, syncingCount }) => {
+const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' | 'onManageTrips' | 'selectedTripName'>> = ({ pendingCount, syncingCount }) => {
   if (syncingCount > 0) {
     return (
       <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-full">
@@ -41,7 +40,7 @@ const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' |
   );
 };
 
-export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories, onManageTrips }) => {
+export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories, onManageTrips, selectedTripName }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { homeCurrency, setHomeCurrency, ratesLastUpdated } = useCurrency();
@@ -91,11 +90,18 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
   return (
     <header className="bg-white dark:bg-gray-900 shadow-md dark:shadow-gray-800/50 sticky top-0 z-40">
       <div className="container mx-auto px-4 py-3 md:px-6 md:py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <ReceiptIcon className="w-8 h-8 text-blue-600 dark:text-blue-500" />
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-            Travel Receipt Manager
-          </h1>
+        <div className="flex items-center space-x-3 min-w-0">
+          <ReceiptIcon className="w-8 h-8 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight truncate">
+              Travel Receipt Manager
+            </h1>
+            {selectedTripName && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold truncate" title={selectedTripName}>
+                {selectedTripName}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-4">
             <div className="hidden sm:block">

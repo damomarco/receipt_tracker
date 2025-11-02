@@ -2,7 +2,7 @@ import React, { createContext, useContext } from 'react';
 import { Receipt } from '../types';
 
 interface ReceiptsContextType {
-  receipts: Receipt[];
+  receipts: Receipt[]; // The currently filtered receipts
   deleteReceipt: (id: string) => void;
   updateReceipt: (receipt: Receipt) => void;
   allCategories: string[];

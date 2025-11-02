@@ -171,7 +171,8 @@ export const SpendingSummary: React.FC<SpendingSummaryProps> = ({ dateFilter, se
             )}
           </div>
           
-          <CategorySpendingChart />
+          {/* FIX: Passed the required 'receipts' prop to the CategorySpendingChart component. */}
+          <CategorySpendingChart receipts={receipts} />
         </div>
       )}
     </div>

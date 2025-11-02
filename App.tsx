@@ -7,12 +7,12 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { Receipt, DEFAULT_CATEGORIES, Trip } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
-import { SpendingSummary } from './components/SpendingSummary';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 import { ManageTripsModal } from './components/ManageTripsModal';
 import { ReceiptsProvider } from './contexts/ReceiptsContext';
 import { saveImage, deleteImage } from './services/imageStore';
 import { TripsProvider } from './contexts/TripsContext';
+import { TripFilter } from './components/TripFilter';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,34 +24,11 @@ function App() {
   const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
   const [trips, setTrips] = useLocalStorage<Trip[]>('trips', []);
   
-  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null); // null means "All Receipts"
   const isOnline = useOnlineStatus();
   const prevReceiptsCount = useRef(receipts.length);
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories].sort();
-
-  useEffect(() => {
-    const wasEmpty = prevReceiptsCount.current === 0;
-    const isEmpty = receipts.length === 0;
-
-    // Prefill date filter on initial load or when adding the first receipt
-    if (wasEmpty && !isEmpty) {
-      let min = receipts[0].date;
-      let max = receipts[0].date;
-      receipts.forEach(receipt => {
-        if (receipt.date < min) min = receipt.date;
-        if (receipt.date > max) max = receipt.date;
-      });
-      setDateFilter({ start: min, end: max });
-    } 
-    // Clear date filter when the last receipt is deleted
-    else if (!wasEmpty && isEmpty) {
-      setDateFilter({ start: '', end: '' });
-    }
-
-    // Update the ref for the next render cycle
-    prevReceiptsCount.current = receipts.length;
-  }, [receipts]);
 
   useEffect(() => {
     if (isOnline) {
@@ -163,6 +140,10 @@ function App() {
   };
 
   const deleteTrip = (id: string) => {
+    // If we're deleting the currently selected trip, reset the filter
+    if (selectedTripId === id) {
+      setSelectedTripId(null);
+    }
     // First, un-assign this trip from all receipts
     setReceipts(prevReceipts => 
       prevReceipts.map(r => r.tripId === id ? { ...r, tripId: undefined } : r)
@@ -176,16 +157,15 @@ function App() {
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
 
   const filteredReceipts = useMemo(() => {
-    if (!dateFilter.start && !dateFilter.end) {
-      return receipts;
+    if (!selectedTripId) {
+      return receipts; // "All Receipts" selected
     }
-    return receipts.filter(receipt => {
-      const receiptDate = receipt.date;
-      const isAfterStart = !dateFilter.start || receiptDate >= dateFilter.start;
-      const isBeforeEnd = !dateFilter.end || receiptDate <= dateFilter.end;
-      return isAfterStart && isBeforeEnd;
-    });
-  }, [receipts, dateFilter]);
+    return receipts.filter(r => r.tripId === selectedTripId);
+  }, [receipts, selectedTripId]);
+  
+  const selectedTripName = useMemo(() => {
+    return trips.find(t => t.id === selectedTripId)?.name || null;
+  }, [selectedTripId, trips]);
 
   const receiptsContextValue = {
     receipts: filteredReceipts,
@@ -208,9 +188,13 @@ function App() {
             syncingCount={syncingCount}
             onManageCategories={() => setIsCategoriesModalOpen(true)}
             onManageTrips={() => setIsTripsModalOpen(true)}
+            selectedTripName={selectedTripName}
           />
           <main className="flex-grow container mx-auto p-4 md:p-6">
-            <SpendingSummary dateFilter={dateFilter} setDateFilter={setDateFilter} />
+            <TripFilter 
+              selectedTripId={selectedTripId} 
+              onTripChange={setSelectedTripId}
+            />
             <ReceiptList totalReceiptCount={receipts.length} />
           </main>
           

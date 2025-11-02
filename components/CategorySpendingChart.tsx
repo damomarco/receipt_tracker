@@ -1,7 +1,6 @@
 import React from 'react';
 import { Receipt, Category } from '../types';
 import { ChartBarIcon } from './icons';
-import { useReceipts } from '../contexts/ReceiptsContext';
 import { getCategoryStyling } from '../utils/colors';
 
 interface SpendingData {
@@ -10,9 +9,11 @@ interface SpendingData {
 }
 type SpendingByCurrency = Record<string, SpendingData>;
 
-export const CategorySpendingChart: React.FC = () => {
-  const { receipts } = useReceipts();
+interface CategorySpendingChartProps {
+  receipts: Receipt[];
+}
 
+export const CategorySpendingChart: React.FC<CategorySpendingChartProps> = ({ receipts }) => {
   const spendingByCurrency = React.useMemo(() => {
     return receipts.reduce((acc, receipt) => {
       const currency = receipt.currency || 'UNKNOWN';
