@@ -79,3 +79,15 @@ export interface ExtractedReceiptData {
 export interface ExchangeRateCache {
     [key: string]: number; // key format: "YYYY-MM-DD_FROM_TO"
 }
+
+export interface Filters {
+  dateRange: {
+    start: string | null;
+    end: string | null;
+  };
+  categories: string[];
+  amountRange: {
+    min: number | null;
+    max: number | null;
+  };
+}

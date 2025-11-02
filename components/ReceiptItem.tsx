@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Receipt, ReceiptItemData } from '../types';
 import { useReceipts } from '../contexts/ReceiptsContext';
 import { useTrips } from '../contexts/TripsContext';
@@ -11,8 +9,36 @@ import { getImage } from '../services/imageStore';
 import { useCurrency } from '../contexts/CurrencyContext';
 
 
+interface HighlightProps {
+  text: string;
+  highlight: string;
+}
+
+const Highlight: React.FC<HighlightProps> = ({ text, highlight }) => {
+  if (!highlight || !text) {
+    return <>{text}</>;
+  }
+  const regex = new RegExp(`(${highlight})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-yellow-300 dark:bg-yellow-500 text-black rounded px-1 py-0.5">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
+
 interface ReceiptItemProps {
   receipt: Receipt;
+  searchTerm?: string;
 }
 
 const ReceiptStatus: React.FC<{ status: Receipt['status'] }> = ({ status }) => {
@@ -63,13 +89,16 @@ const ConvertedAmount: React.FC<{ receipt: Receipt }> = ({ receipt }) => {
 };
 
 
-export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
+export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, searchTerm = '' }) => {
   const { deleteReceipt, updateReceipt, allCategories } = useReceipts();
   const { trips } = useTrips();
   const [isEditing, setIsEditing] = useState(false);
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  const isSearching = searchTerm.trim() !== '';
+  const lowerCaseSearchTerm = searchTerm.trim().toLowerCase();
   
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +112,19 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
 
     return () => { isMounted = false; };
   }, [receipt.id]);
+
+  const displayItems = useMemo(() => {
+    if (!isSearching) {
+        return receipt.items;
+    }
+    // If searching, only show items that match.
+    return receipt.items.filter(item => {
+        const originalDesc = item.description?.original || '';
+        const translatedDesc = item.description?.translated || '';
+        return originalDesc.toLowerCase().includes(lowerCaseSearchTerm) ||
+               translatedDesc.toLowerCase().includes(lowerCaseSearchTerm);
+    });
+  }, [isSearching, lowerCaseSearchTerm, receipt.items]);
 
 
   const handleDelete = () => {
@@ -234,8 +276,12 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
               )}
             </button>
             <div className="flex-grow">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{receipt.merchant.translated}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.merchant.original}</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <Highlight text={receipt.merchant.translated} highlight={searchTerm} />
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                <Highlight text={receipt.merchant.original} highlight={searchTerm} />
+              </p>
               {receipt.location && (
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
                     <MapPinIcon className="w-4 h-4 mr-1.5 flex-shrink-0" />
@@ -263,14 +309,16 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt }) => {
         </div>
         
         <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
-            <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Items ({receipt.items.length})</h4>
+            <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Items ({isSearching ? displayItems.length : receipt.items.length})</h4>
             <div className="space-y-2">
-                {receipt.items.map((item, index) => {
+                {displayItems.map((item, index) => {
                     const styling = getCategoryStyling(item.category);
                     return (
                         <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                             <div className="flex-grow truncate mr-2">
-                                <p className="text-gray-800 dark:text-gray-200 truncate" title={item.description.translated}>{item.description.translated}</p>
+                                <p className="text-gray-800 dark:text-gray-200 truncate" title={item.description.translated}>
+                                  <Highlight text={item.description.translated} highlight={searchTerm} />
+                                </p>
                                 <div className="flex items-center mt-1">
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styling.tag}`}>
                                         {item.category}

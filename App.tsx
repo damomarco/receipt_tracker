@@ -5,7 +5,7 @@ import { ReceiptList } from './components/ReceiptList';
 import { PlusIcon, ChatBubbleIcon } from './components/icons';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { Receipt, DEFAULT_CATEGORIES, Trip } from './types';
+import { Receipt, DEFAULT_CATEGORIES, Trip, Filters } from './types';
 import { GlobalChatModal } from './components/GlobalChatModal';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 import { ManageTripsModal } from './components/ManageTripsModal';
@@ -13,18 +13,31 @@ import { ReceiptsProvider } from './contexts/ReceiptsContext';
 import { saveImage, deleteImage } from './services/imageStore';
 import { TripsProvider } from './contexts/TripsContext';
 import { TripFilter } from './components/TripFilter';
+import { SearchAndFilterBar } from './components/SearchAndFilterBar';
+import { FilterModal } from './components/FilterModal';
+import { ActiveFiltersDisplay } from './components/ActiveFiltersDisplay';
+
+const initialFilters: Filters = {
+  dateRange: { start: null, end: null },
+  categories: [],
+  amountRange: { min: null, max: null },
+};
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isTripsModalOpen, setIsTripsModalOpen] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const [receipts, setReceipts] = useLocalStorage<Receipt[]>('receipts', []);
   const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
   const [trips, setTrips] = useLocalStorage<Trip[]>('trips', []);
   
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null); // null means "All Receipts"
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Filters>(initialFilters);
+
   const isOnline = useOnlineStatus();
   const prevReceiptsCount = useRef(receipts.length);
 
@@ -34,13 +47,11 @@ function App() {
     if (isOnline) {
       const pendingReceipts = receipts.filter(r => r.status === 'pending');
       if (pendingReceipts.length > 0) {
-        // Mark as syncing
         setReceipts(prev => prev.map(r => r.status === 'pending' ? { ...r, status: 'syncing' } : r));
         
-        // Simulate API upload and mark as synced
         setTimeout(() => {
           setReceipts(prev => prev.map(r => r.status === 'syncing' ? { ...r, status: 'synced' } : r));
-        }, 2500); // Simulate 2.5 second sync time
+        }, 2500);
       }
     }
   }, [isOnline, receipts, setReceipts]);
@@ -65,18 +76,14 @@ function App() {
 
     setReceipts(prevReceipts => [...prevReceipts, ...newReceipts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setIsModalOpen(false);
-};
-
+  };
   
   const deleteReceipt = async (id: string) => {
-    // First remove metadata from localStorage
     setReceipts(prevReceipts => prevReceipts.filter(receipt => receipt.id !== id));
     try {
-        // Then remove the image from IndexedDB
         await deleteImage(id);
     } catch (error) {
         console.error("Failed to delete receipt image:", error);
-        // If this fails, we might have an orphaned image, but the app will still function.
     }
   };
 
@@ -85,53 +92,39 @@ function App() {
   };
 
   const addCustomCategory = (name: string): boolean => {
-    if (allCategories.some(c => c.toLowerCase() === name.toLowerCase())) {
-      return false; // Indicate that the category already exists
-    }
+    if (allCategories.some(c => c.toLowerCase() === name.toLowerCase())) return false;
     setCustomCategories(prev => [...prev, name]);
     return true;
   };
 
   const updateCustomCategory = (oldName: string, newName: string): boolean => {
-    if (oldName.toLowerCase() !== newName.toLowerCase() && allCategories.some(c => c.toLowerCase() === newName.toLowerCase())) {
-      return false; // Indicate that the new name already exists
-    }
-    // Update the category in the custom categories list
+    if (oldName.toLowerCase() !== newName.toLowerCase() && allCategories.some(c => c.toLowerCase() === newName.toLowerCase())) return false;
     setCustomCategories(prev => prev.map(c => (c === oldName ? newName : c)));
-
-    // Cascade the update to all receipt items
     setReceipts(prevReceipts =>
       prevReceipts.map(receipt => ({
         ...receipt,
-        items: receipt.items.map(item =>
+        items: receipt.items ? receipt.items.map(item =>
           item.category === oldName ? { ...item, category: newName } : item
-        ),
+        ) : [],
       }))
     );
     return true;
   };
 
   const deleteCustomCategory = (name: string) => {
-    // Remove the category from the custom list
     setCustomCategories(prev => prev.filter(c => c !== name));
-    
-    // Re-assign items with this category to 'Other'
     setReceipts(prevReceipts =>
       prevReceipts.map(receipt => ({
         ...receipt,
-        items: receipt.items.map(item =>
+        items: receipt.items ? receipt.items.map(item =>
           item.category === name ? { ...item, category: 'Other' } : item
-        ),
+        ) : [],
       }))
     );
   };
   
-  // Trip Management
   const addTrip = (tripData: Omit<Trip, 'id'>) => {
-    const newTrip: Trip = {
-      id: new Date().toISOString() + Math.random(),
-      ...tripData,
-    };
+    const newTrip: Trip = { id: new Date().toISOString() + Math.random(), ...tripData };
     setTrips(prev => [...prev, newTrip].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()));
   };
 
@@ -140,32 +133,80 @@ function App() {
   };
 
   const deleteTrip = (id: string) => {
-    // If we're deleting the currently selected trip, reset the filter
-    if (selectedTripId === id) {
-      setSelectedTripId(null);
-    }
-    // First, un-assign this trip from all receipts
+    if (selectedTripId === id) setSelectedTripId(null);
     setReceipts(prevReceipts => 
       prevReceipts.map(r => r.tripId === id ? { ...r, tripId: undefined } : r)
     );
-    // Then, delete the trip itself
     setTrips(prev => prev.filter(t => t.id !== id));
   };
-
 
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
 
   const filteredReceipts = useMemo(() => {
-    if (!selectedTripId) {
-      return receipts; // "All Receipts" selected
-    }
-    return receipts.filter(r => r.tripId === selectedTripId);
-  }, [receipts, selectedTripId]);
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
+    return receipts.filter(r => {
+      // 1. Trip Filter
+      if (selectedTripId && r.tripId !== selectedTripId) return false;
+
+      // 2. Search Term Filter
+      if (lowerCaseSearchTerm) {
+        const merchantOriginal = r.merchant?.original;
+        const merchantTranslated = r.merchant?.translated;
+
+        const inMerchant = (merchantOriginal && merchantOriginal.toLowerCase().includes(lowerCaseSearchTerm)) ||
+                           (merchantTranslated && merchantTranslated.toLowerCase().includes(lowerCaseSearchTerm));
+
+        const inItems = r.items?.some(item => {
+          const originalDesc = item.description?.original;
+          const translatedDesc = item.description?.translated;
+          const originalMatch = originalDesc && originalDesc.toLowerCase().includes(lowerCaseSearchTerm);
+          const translatedMatch = translatedDesc && translatedDesc.toLowerCase().includes(lowerCaseSearchTerm);
+          return originalMatch || translatedMatch;
+        }) ?? false;
+
+        if (!inMerchant && !inItems) return false;
+      }
+
+      // 3. Advanced Filters
+      const { dateRange, categories, amountRange } = filters;
+      if (dateRange.start && r.date < dateRange.start) return false;
+      if (dateRange.end && r.date > dateRange.end) return false;
+      
+      if (categories.length > 0) {
+        const hasCategory = r.items?.some(item => categories.includes(item.category)) ?? false;
+        if (!hasCategory) return false;
+      }
+      
+      if (amountRange.min !== null && r.total < amountRange.min) return false;
+      if (amountRange.max !== null && r.total > amountRange.max) return false;
+
+      return true;
+    });
+  }, [receipts, selectedTripId, searchTerm, filters]);
   
   const selectedTripName = useMemo(() => {
     return trips.find(t => t.id === selectedTripId)?.name || null;
   }, [selectedTripId, trips]);
+  
+  const clearAllFilters = () => {
+    setFilters(initialFilters);
+  };
+  
+  const removeFilter = (filterType: keyof Filters, valueToRemove?: any) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      if (filterType === 'categories' && valueToRemove) {
+        newFilters.categories = newFilters.categories.filter(c => c !== valueToRemove);
+      } else if (filterType === 'dateRange') {
+        newFilters.dateRange = { start: null, end: null };
+      } else if (filterType === 'amountRange') {
+        newFilters.amountRange = { min: null, max: null };
+      }
+      return newFilters;
+    });
+  };
 
   const receiptsContextValue = {
     receipts: filteredReceipts,
@@ -191,11 +232,36 @@ function App() {
             selectedTripName={selectedTripName}
           />
           <main className="flex-grow container mx-auto p-4 md:p-6">
-            <TripFilter 
-              selectedTripId={selectedTripId} 
-              onTripChange={setSelectedTripId}
-            />
-            <ReceiptList totalReceiptCount={receipts.length} />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="md:col-span-1">
+                 <TripFilter 
+                    selectedTripId={selectedTripId} 
+                    onTripChange={setSelectedTripId}
+                  />
+              </div>
+              <div className="md:col-span-3">
+                 <SearchAndFilterBar
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                    onFilterClick={() => setIsFilterModalOpen(true)}
+                    activeFilterCount={
+                      (filters.dateRange.start ? 1 : 0) + 
+                      filters.categories.length + 
+                      (filters.amountRange.min !== null || filters.amountRange.max !== null ? 1 : 0)
+                    }
+                  />
+                  <ActiveFiltersDisplay 
+                    filters={filters} 
+                    onClearAll={clearAllFilters} 
+                    onRemoveFilter={removeFilter} 
+                  />
+                 <ReceiptList 
+                    totalReceiptCount={receipts.length}
+                    filteredReceiptCount={filteredReceipts.length}
+                    searchTerm={searchTerm}
+                  />
+              </div>
+            </div>
           </main>
           
           <button
@@ -246,6 +312,15 @@ function App() {
               onAddTrip={addTrip}
               onUpdateTrip={updateTrip}
               onDeleteTrip={deleteTrip}
+            />
+          )}
+
+          {isFilterModalOpen && (
+            <FilterModal
+              onClose={() => setIsFilterModalOpen(false)}
+              onApplyFilters={setFilters}
+              currentFilters={filters}
+              allCategories={allCategories}
             />
           )}
         </div>

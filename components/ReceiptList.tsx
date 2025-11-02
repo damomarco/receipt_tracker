@@ -10,6 +10,8 @@ import { useCurrency } from '../contexts/CurrencyContext';
 
 interface ReceiptListProps {
   totalReceiptCount: number;
+  filteredReceiptCount: number;
+  searchTerm: string;
 }
 
 type GroupedByDay = Record<string, Receipt[]>;
@@ -21,22 +23,22 @@ interface GroupedByTrip {
   }
 }
 
-export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) => {
+export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount, filteredReceiptCount, searchTerm }) => {
   const { receipts } = useReceipts();
   const { trips } = useTrips();
   const { formatDate } = useCurrency();
   
+  const isSearching = searchTerm.trim() !== '';
+
   const groupedData = useMemo(() => {
-    const receiptsToGroup = receipts;
+    if (isSearching) return {};
     
-    return receiptsToGroup.reduce((acc, receipt) => {
+    return receipts.reduce((acc, receipt) => {
       const tripId = receipt.tripId || 'unassigned';
       const date = receipt.date;
 
       if (!acc[tripId]) {
-        // FIX: Replaced nullish coalescing with a more explicit check to avoid potential TypeScript inference issues with complex union types.
         const foundTrip = trips.find(t => t.id === tripId);
-        // FIX: Add an explicit type annotation to prevent TypeScript from incorrectly widening the type of the union.
         const tripDetails: Trip | { id: 'unassigned'; name: string } = foundTrip ? foundTrip : { id: 'unassigned', name: 'Unassigned Receipts' };
         acc[tripId] = { tripDetails, receiptsByDay: {} };
       }
@@ -47,9 +49,11 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
       acc[tripId].receiptsByDay[date].push(receipt);
       return acc;
     }, {} as GroupedByTrip);
-  }, [receipts, trips]);
+  }, [receipts, trips, isSearching]);
 
   const sortedTripIds = useMemo(() => {
+    if (isSearching) return [];
+
     const tripDetailsMap = new Map(trips.map(t => [t.id, t]));
     return Object.keys(groupedData).sort((a, b) => {
       if (a === 'unassigned') return 1;
@@ -58,11 +62,11 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
       const tripB = tripDetailsMap.get(b);
       return new Date(tripB?.startDate || 0).getTime() - new Date(tripA?.startDate || 0).getTime();
     });
-  }, [groupedData, trips]);
+  }, [groupedData, trips, isSearching]);
   
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
      if (sortedTripIds.length > 0) {
-      return { [sortedTripIds[0]]: true }; // Expand the most recent trip by default
+      return { [sortedTripIds[0]]: true };
     }
     return {};
   });
@@ -70,9 +74,9 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>(() => {
     if (sortedTripIds.length > 0) {
       const mostRecentTripId = sortedTripIds[0];
-      const daysInTrip = Object.keys(groupedData[mostRecentTripId].receiptsByDay).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      const daysInTrip = Object.keys(groupedData[mostRecentTripId]?.receiptsByDay || {}).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
       if (daysInTrip.length > 0) {
-        return { [daysInTrip[0]]: true }; // Expand the most recent day in the most recent trip by default
+        return { [daysInTrip[0]]: true };
       }
     }
     return {};
@@ -89,43 +93,63 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
 
   if (totalReceiptCount === 0) {
     return (
-      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm mt-6">
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">No receipts yet</h2>
         <p className="mt-2 text-gray-500 dark:text-gray-400">Tap the '+' button to add your first receipt.</p>
       </div>
     );
   }
 
-  if (receipts.length === 0) {
+  if (filteredReceiptCount === 0) {
     return (
-      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+      <div className="text-center py-20 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm mt-6">
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">No Receipts Found</h2>
-        <p className="mt-2 text-gray-500 dark:text-gray-400">No receipts match the current filter. Try selecting a different trip.</p>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">No receipts match your current search and filter criteria.</p>
+      </div>
+    );
+  }
+  
+  // Render a flat list when searching
+  if (isSearching) {
+    return (
+      <div className="space-y-4 mt-6">
+        {receipts.map(receipt => (
+          <ReceiptItem key={receipt.id} receipt={receipt} searchTerm={searchTerm} />
+        ))}
       </div>
     );
   }
 
+  // Render original grouped view when not searching
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-6">
       {sortedTripIds.map(tripId => {
-        const { tripDetails, receiptsByDay } = groupedData[tripId];
+        const group = groupedData[tripId];
+        if (!group) return null;
+        const { tripDetails, receiptsByDay } = group;
+
+        const daysInGroup = Object.keys(receiptsByDay)
+            .filter(date => receiptsByDay[date] && receiptsByDay[date].length > 0)
+            .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+        if (daysInGroup.length === 0) return null;
+
         const isGroupExpanded = !!expandedGroups[tripId];
-        const daysInGroup = Object.keys(receiptsByDay).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
         const allReceiptsInGroup = daysInGroup.flatMap(date => receiptsByDay[date]);
 
         return (
           <div key={tripId} className="bg-white dark:bg-gray-800/50 rounded-lg shadow-md transition-all duration-300">
             <div
-              className="flex justify-between items-center p-4 md:p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
+              className="flex justify-between items-center p-4 md:p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg"
               onClick={() => toggleGroupExpansion(tripId)}
               role="button"
               aria-expanded={isGroupExpanded}
               aria-controls={`receipts-for-${tripId}`}
             >
-              <div className="flex items-center space-x-3">
-                <BriefcaseIcon className="w-7 h-7 text-gray-500 dark:text-gray-400" />
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{tripDetails.name}</h2>
+              <div className="flex items-center space-x-3 min-w-0">
+                <BriefcaseIcon className="w-7 h-7 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                <div className="min-w-0">
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 truncate" title={tripDetails.name}>{tripDetails.name}</h2>
                     {'startDate' in tripDetails && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(tripDetails.startDate)} to {formatDate(tripDetails.endDate)}</p>
                     )}
@@ -148,76 +172,68 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount }) =
             </div>
             
             {isGroupExpanded && (
-              <div>
+              <div className="rounded-b-lg overflow-hidden">
                 {tripId !== 'unassigned' && (
                   <TripSpendingSummary receipts={allReceiptsInGroup} />
                 )}
                 
-                {allReceiptsInGroup.length > 0 && (
-                  <div 
-                    id={`receipts-for-${tripId}`} 
-                    className={`px-4 md:px-6 pb-4 md:pb-6 space-y-4
-                      ${tripId === 'unassigned' ? 'border-t border-gray-200 dark:border-gray-700 pt-4' : ''}
-                    `}
-                  >
-                    {daysInGroup.map(date => {
-                      const isDayExpanded = !!expandedDays[date];
-                      const formattedDate = formatDate(date, {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      });
+                <div 
+                  id={`receipts-for-${tripId}`} 
+                  className={`px-4 md:px-6 pb-4 md:pb-6 space-y-4
+                    ${tripId === 'unassigned' && allReceiptsInGroup.length > 0 ? 'border-t border-gray-200 dark:border-gray-700 pt-4' : ''}
+                  `}
+                >
+                  {daysInGroup.map(date => {
+                    const isDayExpanded = !!expandedDays[date];
+                    const formattedDate = formatDate(date, {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    });
 
-                      return (
-                        <div key={date} className="bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <div
-                            className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg"
-                            onClick={() => toggleDayExpansion(date)}
-                            role="button"
-                            aria-expanded={isDayExpanded}
-                            aria-controls={`receipts-for-${date}`}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <CalendarIcon className="w-5 h-5 text-gray-400 dark:text-gray-500"/>
-                              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{formattedDate}</h3>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  exportToCSV(receiptsByDay[date], date);
-                                }}
-                                className="flex items-center space-x-2 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold py-1 px-2 rounded-md transition-colors"
-                                aria-label={`Export receipts for ${formattedDate} to CSV`}
-                              >
-                                <DownloadIcon className="w-3 h-3" />
-                                <span className="hidden sm:inline">Export Day</span>
-                              </button>
-                              <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isDayExpanded ? 'rotate-180' : ''}`} />
+                    return (
+                      <div key={date} className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div
+                          className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-t-lg"
+                          onClick={() => toggleDayExpansion(date)}
+                          role="button"
+                          aria-expanded={isDayExpanded}
+                          aria-controls={`receipts-for-${date}`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <CalendarIcon className="w-5 h-5 text-gray-400 dark:text-gray-500"/>
+                            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{formattedDate}</h3>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                exportToCSV(receiptsByDay[date], date);
+                              }}
+                              className="flex items-center space-x-2 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold py-1 px-2 rounded-md transition-colors"
+                              aria-label={`Export receipts for ${formattedDate} to CSV`}
+                            >
+                              <DownloadIcon className="w-3 h-3" />
+                              <span className="hidden sm:inline">Export Day</span>
+                            </button>
+                            <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isDayExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+                        
+                        {isDayExpanded && (
+                          <div id={`receipts-for-${date}`} className="px-4 pb-4 rounded-b-lg">
+                            <div className="space-y-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+                              {receiptsByDay[date].map(receipt => (
+                                <ReceiptItem key={receipt.id} receipt={receipt} />
+                              ))}
                             </div>
                           </div>
-                          
-                          {isDayExpanded && (
-                            <div id={`receipts-for-${date}`} className="px-4 pb-4">
-                              <div className="space-y-4 border-t border-gray-200 dark:border-gray-600 pt-4">
-                                {receiptsByDay[date].map(receipt => (
-                                  <ReceiptItem key={receipt.id} receipt={receipt} />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {isGroupExpanded && allReceiptsInGroup.length === 0 && tripId === 'unassigned' && (
-                    <div className="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-center text-sm text-gray-500 dark:text-gray-400">
-                        No unassigned receipts found.
-                    </div>
-                )}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

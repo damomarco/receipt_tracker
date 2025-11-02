@@ -6,6 +6,10 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Recently Completed
 
+-   **Advanced Search and Filtering**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented a comprehensive search and filter system. Includes a real-time search bar for merchants and items, an advanced filter modal (date range, categories, amount), a dedicated flat-list view for search results, and highlighting of matched terms within receipts.
+
 -   **Trip Management & Filtering**:
     -   **Status**: ✅ **Done**
     -   **Description**: Implemented a core trip management system. Users can create, update, and delete trips. The main UI is now trip-centric, allowing users to filter their receipts by a selected trip for a more focused view.
@@ -17,6 +21,10 @@ This document outlines the planned features and future direction for the Travel 
 -   **Improved Currency Conversion**:
     -   **Status**: ✅ **Done**
     -   **Description**: Integrated the Frankfurter.app API to fetch historical exchange rates. Users can now set a "home currency" and see a grand total converted to that currency, with rates cached for offline use. The correct rate for the date of each receipt is used.
+
+-   **Locale-Aware Date Formatting**:
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented automatic date formatting based on the selected home currency. Dates are now displayed in a familiar, regional format (e.g., MM/DD/YYYY for USD), enhancing the international user experience.
 
 -   **Migrate Image Storage to IndexedDB**:
     -   **Status**: ✅ **Done**
@@ -40,14 +48,8 @@ This document outlines the planned features and future direction for the Travel 
 
 ### Planned
 
--   **Advanced Search and Filtering**:
-    -   **Status**: **Next Up**
-    -   **Description**: Implement a global search bar and add filtering options to the main receipt list (e.g., filter by category, merchant name).
-    -   **Reward (Medium)**: Improves usability significantly as the number of receipts grows, allowing users to find information quickly.
-    -   **Risk (Low)**: For client-side search, this is a low-risk feature. The logic involves filtering the existing `receipts` array.
-
 -   **Manual Data Portability (Import/Export)**:
-    -   **Status**: Planned
+    -   **Status**: **Next Up**
     -   **Description**: Implement JSON export/import for all user data (receipts, categories, trips). This gives users a way to move their data between devices or for personal archival. It is a data portability tool, while the future BaaS will serve as the primary backup mechanism.
     -   **Reward (Medium)**: Important for giving users control over their data in a local-first application.
     -   **Risk (Low)**: A straightforward feature to implement using standard browser APIs.

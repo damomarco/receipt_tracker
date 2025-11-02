@@ -7,10 +7,13 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **AI-Powered Receipt Scanning**: Utilizes the Google Gemini API to automatically extract merchant names, dates, and total amounts from receipt photos.
 - **AI-Powered Itemization & Categorization**: Automatically extracts and categorizes individual line items from the receipt, providing a granular breakdown of expenses.
 - **AI-Powered Location Detection**: The AI automatically identifies the city and country from the receipt's text, enhanced with optional GPS data for greater accuracy. If the AI is uncertain about the country, it will provide a list of suggestions.
+- **Advanced Search & Filtering**: A powerful, real-time search bar to instantly find receipts by merchant name or item description. An advanced filter modal allows for precise filtering by date range, categories, and amount.
+- **Focused Search Experience**: Search results are displayed in a clean, flat list. Matched text is highlighted, and non-matching items within a receipt are hidden, making it effortless to find what you're looking for.
 - **Trip Management**: Group receipts into distinct "trips," each with a name and date range, for powerful, contextual organization.
 - **Trip-Based Filtering**: A clean dropdown menu allows you to filter your view to see "All Receipts" or focus on a single, specific trip.
 - **Trip-Specific Spending Summary**: Embedded directly within each trip's view, this summary provides a consolidated breakdown of spending by category and currency, *only for that trip*.
 - **Home Currency Conversion**: Set a "home currency" and see the grand total for each trip automatically converted. The app fetches and caches daily exchange rates to provide accurate, offline-capable conversions.
+- **Locale-Aware Date Formatting**: Dates throughout the app are automatically displayed in the standard format of your home currency's country (e.g., MM/DD/YYYY for USD, DD.MM.YYYY for EUR), providing a more intuitive user experience.
 - **Batch Uploads**: Select and process multiple receipt images at once, streamlining data entry.
 - **Optimized for Speed**: Client-side image resizing significantly reduces upload times, making the receipt scanning process faster, especially on mobile networks.
 - **Bilingual Support**: Translates merchant names and item descriptions from their original language into English for clarity.
@@ -31,11 +34,12 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 4.  **Capture or Upload**: Take a photo or upload images. The app will process them and suggest a trip based on the receipt's date.
 5.  **Review and Save**: Review the extracted data and click "Save Receipts".
 6.  **Filter by Trip**: Use the dropdown at the top of the main screen to filter which receipts are visible.
-7.  **Analyze Your Spending**: Expand a trip in the list to view its "Trip Summary," which shows a percentage-based breakdown of expenses by category for that trip.
-8.  **Ask Questions About All Receipts**: Tap the chat bubble icon to open the global chat. Ask questions like "How much did I spend in total on my Japan 2024 trip?"
-9.  **Manage Receipts**: View all your receipts on the main screen, grouped by trip and then by date.
-10. **Edit or Delete**: Use the icons on each receipt card to edit its details or delete it.
-11. **Export Data**: Click the "Export" button for any trip or day to download a CSV file.
+7.  **Search & Filter**: Use the search bar to find receipts by merchant or item name in real-time. Click the "Filter" button for advanced options like filtering by date, category, or amount.
+8.  **Analyze Your Spending**: Expand a trip in the list to view its "Trip Summary," which shows a percentage-based breakdown of expenses by category for that trip.
+9.  **Ask Questions About All Receipts**: Tap the chat bubble icon to open the global chat. Ask questions like "How much did I spend in total on my Japan 2024 trip?"
+10. **Manage Receipts**: View all your receipts on the main screen, grouped by trip and then by date.
+11. **Edit or Delete**: Use the icons on each receipt card to edit its details or delete it.
+12. **Export Data**: Click the "Export" button for any trip or day to download a CSV file.
 
 ## Privacy
 
