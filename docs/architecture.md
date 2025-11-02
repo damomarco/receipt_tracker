@@ -25,7 +25,7 @@ The application is a client-side, single-page application (SPA) built with **Rea
 
 ## Component Breakdown
 
--   **`App.tsx`**: The root component. It manages the top-level application state (receipts, trips, custom categories, search terms, filters) and modal visibility. It orchestrates the offline/online synchronization logic and wraps the application in the necessary Context Providers.
+-   **`App.tsx`**: The root component. It manages the top-level application state (receipts, trips, custom categories, search terms, filters), modal visibility, and handles the data import/export logic. It orchestrates the offline/online synchronization logic and wraps the application in the necessary Context Providers.
 -   **`components/`**:
     -   `Header.tsx`: Displays the application title, sync status, and a settings menu. Now also shows the name of the currently selected trip.
     -   `ReceiptList.tsx`: A dual-mode component. By default, it renders receipts in collapsible sections grouped by trip and day. When a search term is active, it switches to rendering a flat, sorted list of matching receipts.

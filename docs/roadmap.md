@@ -46,18 +46,16 @@ This document outlines the planned features and future direction for the Travel 
     -   **Status**: ✅ **Done**
     -   **Description**: The Gemini API now suggests a category for each individual item on a receipt. The UI has been updated to support item-level category editing.
 
-### Planned
-
 -   **Manual Data Portability (Import/Export)**:
-    -   **Status**: **Next Up**
-    -   **Description**: Implement JSON export/import for all user data (receipts, categories, trips). This gives users a way to move their data between devices or for personal archival. It is a data portability tool, while the future BaaS will serve as the primary backup mechanism.
+    -   **Status**: ✅ **Done**
+    -   **Description**: Implemented JSON export/import for all user data (receipts, categories, trips, and images). This gives users a way to move their data between devices or for personal archival. It is a data portability tool, while the future BaaS will serve as the primary backup mechanism.
     -   **Reward (Medium)**: Important for giving users control over their data in a local-first application.
     -   **Risk (Low)**: A straightforward feature to implement using standard browser APIs.
 
 ## Medium-Term Goals (3-6 Months)
 
 -   **Cloud Sync & Collaboration (via BaaS)**:
-    -   **Status**: **High Priority**
+    -   **Status**: **Next Up**
     -   **Description**: Integrate a Backend-as-a-Service (BaaS) to enable real-time data synchronization between multiple devices and users (e.g., a receipt collector and a finance manager). This feature will introduce user authentication and will become the primary mechanism for automatic cloud backup. This is the next major architectural evolution.
     -   **Reward (Critical)**: Transforms the app from a personal utility into a collaborative tool, enabling powerful new use cases and ensuring data safety.
     -   **Risk (High)**: A significant architectural change that requires careful implementation of authentication, data migration for existing users, and refactoring of data access logic.

@@ -16,6 +16,7 @@ import { TripFilter } from './components/TripFilter';
 import { SearchAndFilterBar } from './components/SearchAndFilterBar';
 import { FilterModal } from './components/FilterModal';
 import { ActiveFiltersDisplay } from './components/ActiveFiltersDisplay';
+import { NotificationModal } from './components/NotificationModal';
 
 const initialFilters: Filters = {
   dateRange: { start: null, end: null },
@@ -29,6 +30,7 @@ function App() {
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isTripsModalOpen, setIsTripsModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const [receipts, setReceipts] = useLocalStorage<Receipt[]>('receipts', []);
   const [customCategories, setCustomCategories] = useLocalStorage<string[]>('customCategories', []);
@@ -168,7 +170,7 @@ function App() {
 
     } catch (error) {
       console.error("Failed to export data:", error);
-      alert("An error occurred while exporting your data. Please check the console for details.");
+      setNotification({ type: 'error', message: "An error occurred while exporting your data. Please check the console for details." });
     }
   };
 
@@ -208,12 +210,11 @@ function App() {
         );
         await Promise.all(imageSavePromises);
         
-        alert("Import successful! The application will now reload.");
-        window.location.reload();
+        setNotification({ type: 'success', message: "Import successful! Your data has been updated from the backup file." });
 
       } catch (error) {
         console.error("Failed to import data:", error);
-        alert("An error occurred while importing the file. It may be corrupted or in the wrong format.");
+        setNotification({ type: 'error', message: "An error occurred while importing the file. It may be corrupted or in the wrong format." });
       } finally {
         // Reset file input to allow re-importing the same file
         if (event.target) {
@@ -428,6 +429,14 @@ function App() {
               onApplyFilters={setFilters}
               currentFilters={filters}
               availableCategories={categoriesInUse}
+            />
+          )}
+
+          {notification && (
+            <NotificationModal 
+              type={notification.type} 
+              message={notification.message} 
+              onClose={() => setNotification(null)}
             />
           )}
         </div>
