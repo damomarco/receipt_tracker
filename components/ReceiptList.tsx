@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Receipt, Trip } from '../types';
 import { ReceiptItem } from './ReceiptItem';
-import { DownloadIcon, CalendarIcon, ChevronDownIcon, BriefcaseIcon } from './icons';
-import { exportToCSV } from '../utils/csv';
+import { CalendarIcon, ChevronDownIcon, BriefcaseIcon } from './icons';
 import { useReceipts } from '../contexts/ReceiptsContext';
 import { useTrips } from '../contexts/TripsContext';
 import { TripSpendingSummary } from './TripSpendingSummary';
@@ -155,20 +154,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount, fil
                     )}
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    exportToCSV(allReceiptsInGroup, tripDetails.name.replace(/\s+/g, '_'));
-                  }}
-                  className="flex items-center space-x-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-3 rounded-md transition-colors"
-                  aria-label={`Export receipts for ${tripDetails.name} to CSV`}
-                >
-                  <DownloadIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Export Trip</span>
-                </button>
-                <ChevronDownIcon className={`w-6 h-6 text-gray-500 dark:text-gray-400 transition-transform transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
-              </div>
+              <ChevronDownIcon className={`w-6 h-6 text-gray-500 dark:text-gray-400 transition-transform transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
             </div>
             
             {isGroupExpanded && (
@@ -205,20 +191,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ totalReceiptCount, fil
                             <CalendarIcon className="w-5 h-5 text-gray-400 dark:text-gray-500"/>
                             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{formattedDate}</h3>
                           </div>
-                          <div className="flex items-center space-x-4">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                exportToCSV(receiptsByDay[date], date);
-                              }}
-                              className="flex items-center space-x-2 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold py-1 px-2 rounded-md transition-colors"
-                              aria-label={`Export receipts for ${formattedDate} to CSV`}
-                            >
-                              <DownloadIcon className="w-3 h-3" />
-                              <span className="hidden sm:inline">Export Day</span>
-                            </button>
-                            <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isDayExpanded ? 'rotate-180' : ''}`} />
-                          </div>
+                          <ChevronDownIcon className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform transform ${isDayExpanded ? 'rotate-180' : ''}`} />
                         </div>
                         
                         {isDayExpanded && (

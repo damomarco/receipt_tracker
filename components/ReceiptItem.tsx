@@ -93,21 +93,23 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, searchTerm = 
   const { deleteReceipt, updateReceipt, allCategories } = useReceipts();
   const { trips } = useTrips();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
+  const [editFormState, setEditFormState] = useState<Receipt | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   
   const isSearching = searchTerm.trim() !== '';
   const lowerCaseSearchTerm = searchTerm.trim().toLowerCase();
   
   useEffect(() => {
     let isMounted = true;
+    setImageUrl(null); 
     getImage(receipt.id).then(url => {
         if (isMounted && url) {
             setImageUrl(url);
         }
     }).catch(err => {
-        console.error("Failed to load image from IndexedDB", err);
+        console.error("Failed to load image from IndexedDB for receipt", receipt.id, err);
     });
 
     return () => { isMounted = false; };
@@ -127,90 +129,98 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, searchTerm = 
   }, [isSearching, lowerCaseSearchTerm, receipt.items]);
 
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete the receipt from ${receipt.merchant.translated}?`)) {
-      deleteReceipt(receipt.id);
-    }
-  };
-
   const handleEdit = () => {
-    setEditedReceipt(receipt); // Reset changes when entering edit mode
+    setEditFormState(receipt); 
     setIsEditing(true);
+    setIsConfirmingDelete(false);
   };
   
   const handleCancel = () => {
+    setEditFormState(null);
     setIsEditing(false);
   };
 
   const handleSave = () => {
-    updateReceipt(editedReceipt);
+    if (editFormState) {
+        updateReceipt(editFormState);
+    }
     setIsEditing(false);
+    setEditFormState(null);
   };
   
   const handleFormChange = <T extends keyof Omit<Receipt, 'items' | 'total'>>(field: T, value: Receipt[T]) => {
-    setEditedReceipt(prev => ({ ...prev, [field]: value }));
+    if (!editFormState) return;
+    setEditFormState(prev => prev ? ({ ...prev, [field]: value }) : null);
   };
 
-  const handleItemChange = (index: number, field: keyof ReceiptItemData, value: any) => {
-    const newItems = [...editedReceipt.items];
-    const itemToUpdate = { ...newItems[index] };
-    
-    if (field === 'description') {
-      itemToUpdate.description = { ...itemToUpdate.description, translated: value };
-    } else {
-      (itemToUpdate as any)[field] = value;
-    }
-    
-    newItems[index] = itemToUpdate;
-    const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-    setEditedReceipt(prev => ({ ...prev, items: newItems, total: newTotal }));
+  const handleItemChange = (index: number, field: keyof ReceiptItemData, value: string | number) => {
+    if (!editFormState) return;
+    setEditFormState(prev => {
+        if (!prev) return null;
+        const newItems = [...prev.items];
+        const itemToUpdate = { ...newItems[index] };
+        
+        if (field === 'description' && typeof value === 'string') {
+          itemToUpdate.description = { ...itemToUpdate.description, translated: value };
+        } else {
+          (itemToUpdate as any)[field] = value;
+        }
+        
+        newItems[index] = itemToUpdate;
+        const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+        return { ...prev, items: newItems, total: newTotal };
+    });
   };
   
   const handleAddItem = () => {
+    if (!editFormState) return;
     const newItem: ReceiptItemData = {
         description: { original: '', translated: '' },
         price: 0,
         category: 'Other'
     };
-    const newItems = [...editedReceipt.items, newItem];
-    setEditedReceipt(prev => ({ ...prev, items: newItems }));
+    setEditFormState(prev => prev ? ({ ...prev, items: [...prev.items, newItem] }) : null);
   };
 
   const handleRemoveItem = (index: number) => {
-      const newItems = editedReceipt.items.filter((_, i) => i !== index);
-      const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-      setEditedReceipt(prev => ({ ...prev, items: newItems, total: newTotal }));
+    if (!editFormState) return;
+      setEditFormState(prev => {
+          if (!prev) return null;
+          const newItems = prev.items.filter((_, i) => i !== index);
+          const newTotal = newItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+          return { ...prev, items: newItems, total: newTotal };
+      });
   };
 
   const today = new Date().toISOString().split('T')[0];
   const assignedTripName = trips.find(t => t.id === receipt.tripId)?.name;
 
 
-  if (isEditing) {
+  if (isEditing && editFormState) {
     return (
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-blue-500 dark:border-blue-700">
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Merchant</label>
-              <input type="text" value={editedReceipt.merchant.translated} onChange={e => handleFormChange('merchant', { ...editedReceipt.merchant, translated: e.target.value })} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
+              <input type="text" value={editFormState.merchant.translated} onChange={e => handleFormChange('merchant', { ...editFormState.merchant, translated: e.target.value })} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-              <input type="date" value={editedReceipt.date} max={today} onChange={e => handleFormChange('date', e.target.value)} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
+              <input type="date" value={editFormState.date} max={today} onChange={e => handleFormChange('date', e.target.value)} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
              <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-              <input type="text" value={editedReceipt.location || ''} onChange={e => handleFormChange('location', e.target.value)} placeholder="e.g., Tokyo, Japan" className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
+              <input type="text" value={editFormState.location || ''} onChange={e => handleFormChange('location', e.target.value)} placeholder="e.g., Tokyo, Japan" className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
              <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
-              <input type="text" value={editedReceipt.currency} onChange={e => handleFormChange('currency', e.target.value)} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
+              <input type="text" value={editFormState.currency} onChange={e => handleFormChange('currency', e.target.value)} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Trip</label>
               <select
-                value={editedReceipt.tripId || ''}
+                value={editFormState.tripId || ''}
                 onChange={e => handleFormChange('tripId', e.target.value || undefined)}
                 className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
               >
@@ -222,13 +232,13 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, searchTerm = 
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Total</label>
-              <input type="number" step="0.01" readOnly value={editedReceipt.total} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-white cursor-not-allowed" />
+              <input type="number" step="0.01" readOnly value={editFormState.total} className="mt-1 w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-white cursor-not-allowed" />
             </div>
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Items</h4>
             <div className="space-y-2">
-              {editedReceipt.items.map((item, index) => (
+              {editFormState.items.map((item, index) => (
                  <div key={index} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-4">
                       <input type="text" placeholder="Item name" value={item.description.translated} onChange={(e) => handleItemChange(index, 'description', e.target.value)} className="w-full border-gray-300 dark:border-gray-600 rounded-md sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
@@ -302,8 +312,18 @@ export const ReceiptItem: React.FC<ReceiptItemProps> = ({ receipt, searchTerm = 
           <div className="flex flex-col items-end space-y-2">
             <ReceiptStatus status={receipt.status} />
             <div className="flex items-center space-x-1">
-              <button onClick={handleEdit} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" aria-label="Edit receipt"><EditIcon className="w-5 h-5" /></button>
-              <button onClick={handleDelete} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-5 h-5" /></button>
+              {isConfirmingDelete ? (
+                <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-full">
+                  <span className="text-sm font-semibold text-red-600 dark:text-red-400 ml-2">Delete?</span>
+                  <button onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-full" aria-label="Confirm delete"><SaveIcon className="w-5 h-5" /></button>
+                  <button onClick={() => setIsConfirmingDelete(false)} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full" aria-label="Cancel delete"><CancelIcon className="w-5 h-5" /></button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={handleEdit} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" aria-label="Edit receipt"><EditIcon className="w-5 h-5" /></button>
+                  <button onClick={() => setIsConfirmingDelete(true)} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" aria-label="Delete receipt"><TrashIcon className="w-5 h-5" /></button>
+                </>
+              )}
             </div>
           </div>
         </div>

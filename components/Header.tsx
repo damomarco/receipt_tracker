@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon, BriefcaseIcon } from './icons';
+import { ReceiptIcon, CloudSlashIcon, SpinnerIcon, CheckCircleIcon, CogIcon, SunIcon, MoonIcon, ComputerDesktopIcon, CashIcon, BriefcaseIcon, DownloadIcon, ArrowUpTrayIcon } from './icons';
 import { useTheme } from '../hooks/useTheme';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { SUPPORTED_CURRENCIES, SupportedCurrencyCode } from '../types';
@@ -11,9 +11,11 @@ interface HeaderProps {
   onManageCategories: () => void;
   onManageTrips: () => void;
   selectedTripName: string | null;
+  onExportData: () => void;
+  onImportData: () => void;
 }
 
-const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' | 'onManageTrips' | 'selectedTripName'>> = ({ pendingCount, syncingCount }) => {
+const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' | 'onManageTrips' | 'selectedTripName' | 'onExportData' | 'onImportData'>> = ({ pendingCount, syncingCount }) => {
   if (syncingCount > 0) {
     return (
       <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-full">
@@ -40,7 +42,7 @@ const SyncStatus: React.FC<Omit<HeaderProps, 'isOnline' | 'onManageCategories' |
   );
 };
 
-export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories, onManageTrips, selectedTripName }) => {
+export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingCount, onManageCategories, onManageTrips, selectedTripName, onExportData, onImportData }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { homeCurrency, setHomeCurrency, ratesLastUpdated } = useCurrency();
@@ -172,6 +174,32 @@ export const Header: React.FC<HeaderProps> = ({ isOnline, pendingCount, syncingC
                         Rates last updated: {timeAgo(ratesLastUpdated)}
                       </p>
                     </div>
+                  </div>
+                  <div className="border-t border-gray-200 dark:border-gray-700"></div>
+                  <div className="py-1" role="none">
+                    <div className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data Portability</div>
+                    <button
+                      onClick={() => {
+                        onImportData();
+                        setIsSettingsOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      role="menuitem"
+                    >
+                      <ArrowUpTrayIcon className="w-5 h-5 mr-3" />
+                      Import from Backup...
+                    </button>
+                    <button
+                      onClick={() => {
+                        onExportData();
+                        setIsSettingsOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      role="menuitem"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-3" />
+                      Export to Backup...
+                    </button>
                   </div>
                   <div className="border-t border-gray-200 dark:border-gray-700"></div>
                   <div className="py-1" role="none">

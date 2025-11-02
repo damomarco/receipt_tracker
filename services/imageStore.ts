@@ -1,4 +1,3 @@
-
 const DB_NAME = 'ReceiptImageDB';
 const STORE_NAME = 'receiptImages';
 const DB_VERSION = 1;
@@ -55,4 +54,36 @@ export const deleteImage = async (id: string): Promise<void> => {
     transaction.onerror = () => reject(new Error(`Transaction error: ${transaction.error?.message}`));
     request.onerror = () => reject(new Error(`Request error: ${request.error?.message}`));
   });
+};
+
+export const getAllImages = async (): Promise<Record<string, string>> => {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onerror = () => reject(new Error(`Request error: ${request.error?.message}`));
+        request.onsuccess = () => {
+            const result: { id: string; data: string }[] = request.result;
+            const images = result.reduce((acc, item) => {
+                acc[item.id] = item.data;
+                return acc;
+            }, {} as Record<string, string>);
+            resolve(images);
+        };
+    });
+};
+
+export const clearAllImages = async (): Promise<void> => {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.clear();
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(new Error(`Transaction error: ${transaction.error?.message}`));
+        request.onerror = () => reject(new Error(`Request error: ${request.error?.message}`));
+    });
 };

@@ -41,3 +41,8 @@ Working without a build tool requires a deliberate focus on code quality and run
 -   **Security**:
     -   All application code is publicly visible in the browser. Never embed sensitive information or business logic that should not be exposed.
     -   The Gemini API key is handled securely by the AI Studio environment via `process.env.API_KEY` and is not exposed in the client-side code. Do not attempt to manage or store other API keys directly in the code.
+
+-   **Environment Constraints**:
+    -   The application runs in a **sandboxed iframe**, which imposes security restrictions.
+    -   Native browser pop-ups like **`window.alert()`**, **`window.confirm()`**, and **`window.prompt()`** are blocked and will fail silently.
+    -   **Do not use these functions.** Instead, create custom React components (modals, inline confirmations) to handle user notifications and confirmations. This provides a better user experience and avoids environment-related bugs.

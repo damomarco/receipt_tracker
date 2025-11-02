@@ -10,7 +10,7 @@ import { GlobalChatModal } from './components/GlobalChatModal';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 import { ManageTripsModal } from './components/ManageTripsModal';
 import { ReceiptsProvider } from './contexts/ReceiptsContext';
-import { saveImage, deleteImage } from './services/imageStore';
+import { saveImage, deleteImage, getAllImages, clearAllImages } from './services/imageStore';
 import { TripsProvider } from './contexts/TripsContext';
 import { TripFilter } from './components/TripFilter';
 import { SearchAndFilterBar } from './components/SearchAndFilterBar';
@@ -40,6 +40,7 @@ function App() {
 
   const isOnline = useOnlineStatus();
   const prevReceiptsCount = useRef(receipts.length);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories].sort();
 
@@ -139,6 +140,90 @@ function App() {
     );
     setTrips(prev => prev.filter(t => t.id !== id));
   };
+  
+  const handleExportData = async () => {
+    try {
+      const images = await getAllImages();
+      const dataToExport = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {
+          receipts,
+          trips,
+          customCategories,
+          images,
+        }
+      };
+
+      const jsonString = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `travel-receipt-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("An error occurred while exporting your data. Please check the console for details.");
+    }
+  };
+
+  const handleImportTrigger = () => {
+    importFileRef.current?.click();
+  };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const imported = JSON.parse(text);
+
+        // Basic validation
+        if (!imported.version || !imported.data || !imported.data.receipts || !imported.data.trips || !imported.data.customCategories || !imported.data.images) {
+          throw new Error("Invalid backup file format.");
+        }
+
+        // The sandbox environment blocks `window.confirm`.
+        // The user has already been warned by the UI text about the destructive nature of this action.
+        
+        // 1. Clear existing data
+        await clearAllImages();
+        
+        // 2. Set new data (will write to localStorage)
+        setReceipts(imported.data.receipts);
+        setTrips(imported.data.trips);
+        setCustomCategories(imported.data.customCategories);
+
+        // 3. Save new images
+        const imageSavePromises = Object.entries(imported.data.images).map(([id, data]) => 
+          saveImage(id, data as string)
+        );
+        await Promise.all(imageSavePromises);
+        
+        alert("Import successful! The application will now reload.");
+        window.location.reload();
+
+      } catch (error) {
+        console.error("Failed to import data:", error);
+        alert("An error occurred while importing the file. It may be corrupted or in the wrong format.");
+      } finally {
+        // Reset file input to allow re-importing the same file
+        if (event.target) {
+            event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
   const pendingCount = receipts.filter(r => r.status === 'pending').length;
   const syncingCount = receipts.filter(r => r.status === 'syncing').length;
@@ -242,6 +327,8 @@ function App() {
             onManageCategories={() => setIsCategoriesModalOpen(true)}
             onManageTrips={() => setIsTripsModalOpen(true)}
             selectedTripName={selectedTripName}
+            onExportData={handleExportData}
+            onImportData={handleImportTrigger}
           />
           <main className="flex-grow container mx-auto p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -291,6 +378,14 @@ function App() {
           >
             <PlusIcon className="w-8 h-8" />
           </button>
+          
+          <input
+            type="file"
+            ref={importFileRef}
+            className="hidden"
+            accept="application/json"
+            onChange={handleFileImport}
+          />
 
           {isModalOpen && (
             <AddReceiptModal

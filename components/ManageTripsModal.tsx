@@ -22,6 +22,7 @@ export const ManageTripsModal: React.FC<ManageTripsModalProps> = ({
   const [newTrip, setNewTrip] = useState({ name: '', startDate: '', endDate: '' });
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDeleteTripId, setConfirmingDeleteTripId] = useState<string | null>(null);
 
   useEffect(() => {
     setError(null);
@@ -56,14 +57,14 @@ export const ManageTripsModal: React.FC<ManageTripsModalProps> = ({
     setEditingTrip(null);
   };
   
-  const handleDelete = (trip: Trip) => {
-    if(window.confirm(`Are you sure you want to delete the trip "${trip.name}"? This will un-assign it from all associated receipts.`)) {
-        onDeleteTrip(trip.id);
-    }
+  const handleDelete = (id: string) => {
+    onDeleteTrip(id);
+    setConfirmingDeleteTripId(null);
   }
 
   const handleStartEdit = (trip: Trip) => {
     setEditingTrip({ ...trip });
+    setConfirmingDeleteTripId(null);
   };
   
   const handleCancelEdit = () => {
@@ -111,8 +112,18 @@ export const ManageTripsModal: React.FC<ManageTripsModalProps> = ({
                             <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(trip.startDate)} to {formatDate(trip.endDate)}</p>
                         </div>
                         <div className="flex items-center">
-                            <button onClick={() => handleStartEdit(trip)} className="p-1 text-blue-600 hover:text-blue-800" aria-label="Edit"><EditIcon className="w-5 h-5"/></button>
-                            <button onClick={() => handleDelete(trip)} className="p-1 text-red-600 hover:text-red-800" aria-label="Delete"><TrashIcon className="w-5 h-5"/></button>
+                            {confirmingDeleteTripId === trip.id ? (
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">Delete?</span>
+                                    <button onClick={() => handleDelete(trip.id)} className="p-1 text-green-600 hover:text-green-800" aria-label="Confirm delete"><SaveIcon className="w-5 h-5"/></button>
+                                    <button onClick={() => setConfirmingDeleteTripId(null)} className="p-1 text-gray-500 hover:text-gray-700" aria-label="Cancel delete"><CancelIcon className="w-5 h-5"/></button>
+                                </div>
+                            ) : (
+                                <>
+                                    <button onClick={() => handleStartEdit(trip)} className="p-1 text-blue-600 hover:text-blue-800" aria-label="Edit"><EditIcon className="w-5 h-5"/></button>
+                                    <button onClick={() => setConfirmingDeleteTripId(trip.id)} className="p-1 text-red-600 hover:text-red-800" aria-label="Delete"><TrashIcon className="w-5 h-5"/></button>
+                                </>
+                            )}
                         </div>
                     </div>
                   )}

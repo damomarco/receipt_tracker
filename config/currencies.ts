@@ -1,2 +1,2 @@
-// This file is deprecated and can be removed.
-// The SUPPORTED_CURRENCIES constant should be imported directly from types.ts.
+// This file is deprecated and its contents have been moved to types.ts.
+export {};

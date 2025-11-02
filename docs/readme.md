@@ -22,7 +22,7 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 - **Full Offline Capability**: Add new receipts even without an internet connection. The app automatically syncs them once you're back online.
 - **Granular Data Editing**: Easily correct or update any information extracted by the AI, including the category, price, and description of each individual line item.
 - **Fullscreen Image Viewer**: Tap any receipt thumbnail to view a high-resolution, zoomable image of the receipt.
-- **CSV Export**: Export all receipts for a specific trip or a single day into a CSV file for easy reporting.
+- **Data Portability**: Export all of your application data (receipts, trips, categories, and images) to a single JSON file for backup or transfer. You can also import this data back into the app, which will overwrite existing data.
 - **Responsive Design**: A clean, mobile-first interface that works great on any device.
 - **PWA Ready**: Can be installed on a mobile device's home screen for a native-app-like experience.
 
@@ -38,8 +38,8 @@ A Progressive Web App (PWA) to capture, process, and organize cash receipt photo
 8.  **Analyze Your Spending**: Expand a trip in the list to view its "Trip Summary," which shows a percentage-based breakdown of expenses by category for that trip.
 9.  **Ask Questions About All Receipts**: Tap the chat bubble icon to open the global chat. Ask questions like "How much did I spend in total on my Japan 2024 trip?"
 10. **Manage Receipts**: View all your receipts on the main screen, grouped by trip and then by date.
-11. **Edit or Delete**: Use the icons on each receipt card to edit its details or delete it.
-12. **Export Data**: Click the "Export" button for any trip or day to download a CSV file.
+11. **Edit or Delete**: Use the icons on each receipt card to edit its details. Deleting is a two-step process: click the trash icon once to show a confirmation, then click the checkmark to permanently delete.
+12. **Export/Import Data**: In the settings menu, use the "Data Portability" options to save a full backup of your data or to import data from a previously saved backup file.
 
 ## Privacy
 

@@ -117,14 +117,13 @@ export const AddReceiptModal: React.FC<AddReceiptModalProps> = ({ onClose, onAdd
     }));
   };
 
-  // FIX: Corrected the generic signature for handleNestedItemChange to properly type nested object updates.
   const handleNestedItemChange = <
     K extends 'merchant' | 'location'
   >(
     itemIndex: number,
     parentField: K,
     field: keyof NonNullable<ExtractedReceiptData[K]>,
-    value: any
+    value: string | string[]
   ) => {
      setQueue(prev => prev.map((item, index) => {
       if (index === itemIndex && item.data) {
