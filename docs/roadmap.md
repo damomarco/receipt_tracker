@@ -44,10 +44,10 @@ This document outlines the planned features and future direction for the Travel 
 ### Planned
 
 -   **Trip Management**:
-    -   **Status**: Planned
-    -   **Description**: Allow users to group receipts into distinct "trips," each with its own name, date range, and reporting.
+    -   **Status**: **Next Up**
+    -   **Description**: Allow users to group receipts into distinct "trips," each with its own name and date range. This will be implemented on the current local-first architecture and will define the data model for the future cloud sync feature.
     -   **Reward (High)**: A powerful organizational feature that aligns perfectly with the app's purpose. It allows for trip-specific budgeting and is a major value-add for users.
-    -   **Risk (Medium)**: Requires data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips. Care must be taken to migrate existing data for current users.
+    -   **Risk (Medium)**: Requires data model changes (e.g., adding a `tripId` to receipts) and new UI for managing trips.
 
 -   **Advanced Search and Filtering**:
     -   **Status**: Planned
@@ -55,26 +55,31 @@ This document outlines the planned features and future direction for the Travel 
     -   **Reward (Medium)**: Improves usability significantly as the number of receipts grows, allowing users to find information quickly.
     -   **Risk (Low)**: For client-side search, this is a low-risk feature. The logic involves filtering the existing `receipts` array.
 
--   **Manual Data Backup (Import/Export)**:
+-   **Manual Data Portability (Import/Export)**:
     -   **Status**: Planned
-    -   **Description**: Implement JSON export/import for all user data (receipts, categories). This gives users a manual way to back up their data and migrate it between devices.
-    -   **Reward (High)**: Critically important for a local-only application. It mitigates the risk of data loss and serves as the primary backup mechanism.
+    -   **Description**: Implement JSON export/import for all user data (receipts, categories, trips). This gives users a way to move their data between devices or for personal archival. It is a data portability tool, while the future BaaS will serve as the primary backup mechanism.
+    -   **Reward (Medium)**: Important for giving users control over their data in a local-first application.
     -   **Risk (Low)**: A straightforward feature to implement using standard browser APIs.
 
 ## Medium-Term Goals (3-6 Months)
 
+-   **Cloud Sync & Collaboration (via BaaS)**:
+    -   **Status**: **High Priority**
+    -   **Description**: Integrate a Backend-as-a-Service (BaaS) to enable real-time data synchronization between multiple devices and users (e.g., a receipt collector and a finance manager). This feature will introduce user authentication and will become the primary mechanism for automatic cloud backup. This is the next major architectural evolution after Trip Management is complete.
+    -   **Reward (Critical)**: Transforms the app from a personal utility into a collaborative tool, enabling powerful new use cases and ensuring data safety.
+    -   **Risk (High)**: A significant architectural change that requires careful implementation of authentication, data migration for existing users, and refactoring of data access logic.
+
 -   **AI-Driven Budgeting Insights**:
+    -   **Status**: Planned
     -   **Description**: Create a new "Insights" section where users can ask the Gemini API to analyze spending patterns for a trip or date range and provide helpful summaries or identify anomalies.
     -   **Reward (High)**: Moves the app from a passive data store to a proactive financial assistant, providing unique value.
     -   **Risk (Low)**: A natural extension of the existing "Global Chat" functionality.
 
 -   **AI Confidence Scores**:
+    -   **Status**: Planned
     -   **Description**: Ask the AI model for a confidence score for each extracted field (e.g., merchant, total) and display it in the UI, highlighting fields that may need user review.
     -   **Reward (Medium)**: Builds user trust in the AI by being transparent about its certainty. Helps guide the user's attention, speeding up the verification process.
     -   **Risk (Low)**: Dependent on the AI model being able to provide this information. If available, the implementation is a relatively simple UI change.
-
--   **Cloud Backup & Multi-Device Sync**:
-    -   **Description**: *This feature is currently de-prioritized.* Due to the security and complexity challenges of implementing a backend within the current CDN-based platform, this is a high-risk endeavor. The short-term focus is on providing a robust manual data backup feature via JSON import/export, which serves as a safer, more practical alternative for users.
 
 ## Long-Term Goals (6+ Months)
 
@@ -84,6 +89,6 @@ This document outlines the planned features and future direction for the Travel 
     -   **Risk (Medium)**: Requires abstracting all UI strings into resource files and implementing a library for translation management. It's a significant upfront effort and requires ongoing maintenance.
 
 -   **Integration with Budgeting Apps**:
-    -   **Description**: Provide options to export data in formats compatible with popular budgeting applications (e.g., YNAB, Mint).
+    -   **Description**: Provide options to export data in formats compatible with popular budgeting applications (e.g., YNAB).
     -   **Reward (Medium)**: Increases the app's value by making it part of a user's broader financial ecosystem. Caters to power users.
-    -   **Risk (Low)**: This is primarily an extension of the existing CSV export functionality. The main work is researching the specific formats required by other apps.
+    -   **Risk (Low)**: This is primarily an extension of the existing CSV/JSON export functionality. The main work is researching the specific formats required by other apps.

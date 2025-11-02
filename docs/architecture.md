@@ -74,3 +74,25 @@ To ensure a smooth user experience, especially on mobile devices, several optimi
 ## Styling
 
 The application uses **Tailwind CSS**, loaded directly via a CDN script in `index.html`. This serverless, build-free approach is a core part of the architecture, enabling rapid prototyping and deployment within the AI Studio environment. To ensure Tailwind can find all necessary classes without a build-time JIT compiler, the application avoids generating dynamic class names at runtime; a utility function (`utils/colors.ts`) maps category names to full, static class strings.
+
+## Future Architectural Considerations: Backend-as-a-Service (BaaS) Integration
+
+Integrating a cloud backend like Google Firebase or Supabase is the next logical step for enabling multi-device sync and collaboration. However, this introduces specific challenges within the current build-less architecture that go beyond simply adding a new dependency.
+
+### 1. SDK Integration
+This is the most straightforward part. The client SDK for the chosen BaaS would be added to the `importmap` in `index.html`, just like any other dependency.
+
+### 2. Configuration and Secrets Management
+This is the primary hurdle.
+-   **The Problem**: BaaS platforms require a client-side configuration object containing multiple public keys (`apiKey`, `authDomain`, `projectId`, etc.). The current environment is only set up to securely inject a single secret (`process.env.API_KEY`).
+-   **The Constraint**: Hardcoding this configuration object in the client-side code is a major security risk and should be avoided. A solution would need to be found to securely provide this configuration at runtime without exposing it in the publicly accessible source files.
+
+### 3. Security Rules
+The shift from a local-only data model to a shared cloud database makes security a critical new responsibility.
+-   **The Requirement**: Once data is centralized, we **must** define server-side security rules to control data access. For example, rules must be written to ensure "a user can only read and write receipts that belong to their own account or team."
+-   **The Challenge**: This is not configured in the React application code. It requires learning and implementing the BaaS platform's specific security rule language (e.g., Firestore Security Rules). This is a form of server-side work that is essential for preventing data breaches.
+
+### 4. Data Migration for Existing Users
+A seamless transition plan is required for users who already have data stored locally.
+-   **The Requirement**: When an existing user logs in for the first time, their data from the browser's `localStorage` and `IndexedDB` must be reliably and securely migrated to the new cloud database.
+-   **The Challenge**: This involves writing a robust, one-time migration script within the application. It must handle potential failures gracefully to ensure no user data is lost during the upgrade process.
